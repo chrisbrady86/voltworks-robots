@@ -12,7 +12,12 @@ public class RobotsClient implements ClientModInitializer {
 	@Override
 	public void onInitializeClient() {
 		// The Voltworks Guide gains the robots' pages ("guide.robots.page.1", "...2", ..., from tools/guide.txt) at the end.
-		dev.voltworks.client.GuideScreen.addPages("guide.robots.page.");
+		// The earliest Voltworks 0.1.0 builds have no addPages: then the robots work but have no pages in the guide.
+		try {
+			dev.voltworks.client.GuideScreen.addPages("guide.robots.page.");
+		} catch (LinkageError e) {
+			System.err.println("[robots] This Voltworks build cannot take extra guide pages; update Voltworks to see the Robots pages: " + e);
+		}
 		// Robot Terminal: the server's robot list opens the screen (after a right-click) or refreshes the open one
 		ClientPlayNetworking.registerGlobalReceiver(TerminalViewPayload.TYPE, (payload, context) -> {
 			Minecraft client = context.client();
