@@ -91,7 +91,7 @@ Field Markers work like the Voltworks Quarry's markers, and the same steps set a
 
 Put a hoe and seeds (wheat seeds, beetroot seeds, carrots, potatoes) in the robot's inventory. In a marked field it clears grass and flowers, tills dirt, grass blocks and dirt paths, and plants each block as it goes. It only tills while it has seeds, and tilling wears the hoe. Without a marked field it never tills, but still plants empty farmland around home.
 
-When it unloads into a chest the robot keeps its hoe and 16 seeds of each kind. The markers go into the chest with the harvest. To mark a different field, place two markers again; to go back to the square around home, pick the robot up and place it again. Fields need water as usual: the robot does not place any.
+When it unloads into a chest the robot keeps its hoe and 16 seeds of each kind. The markers go into the chest with the harvest. To mark a different field, place two markers again; to go back to the square around home, press Clear field at a Robot Terminal. Fields need water as usual: the robot does not place any.
 
 ## Config
 
