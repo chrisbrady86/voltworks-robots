@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "R",
+    "S",
+    "T"
+  ],
+  "key": {
+    "R": "minecraft:redstone_torch",
+    "S": "minecraft:wheat_seeds",
+    "T": "voltworks:tin_ingot"
+  },
+  "result": {
+    "id": "robots:field_marker",
+    "count": 2
+  }
+}

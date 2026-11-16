@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "TRT",
+    "CPC"
+  ],
+  "key": {
+    "T": "voltworks:tin_ingot",
+    "R": "minecraft:redstone",
+    "C": "voltworks:copper_cable",
+    "P": "voltworks:power_cell"
+  },
+  "result": {
+    "id": "robots:charging_pad",
+    "count": 1
+  }
+}

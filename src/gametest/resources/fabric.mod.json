@@ -1,0 +1,13 @@
+{
+	"schemaVersion": 1,
+	"id": "robots_test",
+	"version": "1.0.0",
+	"name": "Robots Tests",
+	"environment": "*",
+	"entrypoints": {
+		"fabric-client-gametest": ["dev.voltworks.robots.test.RobotsClientGameTest"]
+	},
+	"depends": {
+		"robots": "*"
+	}
+}

@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": ["WGW", "PCP", "I I"],
+  "key": {
+    "W": "minecraft:wheat",
+    "G": "minecraft:golden_carrot",
+    "P": "voltworks:power_cell",
+    "C": "robots:robot_core",
+    "I": "minecraft:iron_ingot"
+  },
+  "result": { "id": "robots:breeder_robot", "count": 1 }
+}

@@ -1,0 +1,15 @@
+{ "parent": "minecraft:block/block", "ambientocclusion": false,
+  "textures": { "post": "robots:block/field_marker_post", "lamp": "robots:block/field_marker_lamp",
+                "base": "robots:block/field_marker_base", "particle": "robots:block/field_marker_lamp" },
+  "elements": [
+    { "from": [5.0, 0.0, 5.0], "to": [11.0, 1.0, 11.0], "faces": { "north": { "texture": "#base" }, "south": { "texture": "#base" }, "west": { "texture": "#base" }, "east": { "texture": "#base" }, "up": { "texture": "#base" }, "down": { "texture": "#base" } } },
+    { "from": [7.0, 1.0, 7.0], "to": [9.0, 9.0, 9.0], "faces": { "north": { "texture": "#post" }, "south": { "texture": "#post" }, "west": { "texture": "#post" }, "east": { "texture": "#post" }, "up": { "texture": "#post" }, "down": { "texture": "#post" } } },
+    { "from": [6.0, 9.0, 6.0], "to": [10.0, 12.0, 10.0], "shade": false, "light_emission": 15, "faces": { "north": { "texture": "#lamp" }, "south": { "texture": "#lamp" }, "west": { "texture": "#lamp" }, "east": { "texture": "#lamp" }, "up": { "texture": "#lamp" }, "down": { "texture": "#lamp" } } },
+    { "from": [5.5, 12.0, 5.5], "to": [10.5, 13.0, 10.5], "faces": { "north": { "texture": "#base" }, "south": { "texture": "#base" }, "west": { "texture": "#base" }, "east": { "texture": "#base" }, "up": { "texture": "#base" }, "down": { "texture": "#base" } } }  ],
+  "display": {
+    "gui": { "rotation": [30, 225, 0], "translation": [0, 1, 0], "scale": [1.1, 1.1, 1.1] },
+    "ground": { "translation": [0, 3, 0], "scale": [0.5, 0.5, 0.5] },
+    "fixed": { "scale": [0.8, 0.8, 0.8] },
+    "thirdperson_righthand": { "rotation": [75, 45, 0], "translation": [0, 2.5, 0], "scale": [0.5, 0.5, 0.5] },
+    "firstperson_righthand": { "rotation": [0, 45, 0], "translation": [0, 2, 0], "scale": [0.6, 0.6, 0.6] } } }
+

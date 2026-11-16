@@ -1,0 +1,73 @@
+Robots
+@items robots:farm_robot robots:breeder_robot robots:organizer_robot robots:robot_core
+Worker robots that walk around a home spot, carry items and do a job for you.
+
+Use a robot item on a block to stand it there. That block is its home.
+
+Each one holds 9 stacks and runs on energy: 10,000 J when full.
+---
+Using a Robot
+@items robots:robot_terminal
+Right-click: open its inventory.
+Punch: ask what it is doing and what it needs.
+Sneak + right-click: pause or resume.
+Sneak + punch: pick it up. It keeps its energy and drops what it carried.
+
+Robot Terminal: right-click for a screen of every robot in range. Pause them, see what each needs and change its settings.
+
+Nothing else can hurt a robot.
+---
+Charging Robots
+@items robots:charging_pad power_cell copper_cable
+By hand: right-click a robot with a Power Cell for 1,000 J.
+
+Automatic: wire a Robot Charging Pad to your power with Copper Cable. Below 20% a robot walks to a pad within 16 blocks of home, fills up and goes back to work.
+
+A robot standing on a pad is always topped up. Right-click the pad to see its charge.
+---
+Farm Robot
+@items robots:farm_robot minecraft:wheat_seeds minecraft:iron_hoe
+Harvests ripe crops within 8 blocks of home, replants them and takes the harvest to the nearest chest.
+
+Give it seeds and it plants empty farmland. It keeps 16 seeds of each kind and its hoe when it unloads.
+
+Works with wheat, carrots, potatoes and beetroot.
+---
+Marking a Field
+@items robots:field_marker minecraft:iron_hoe
+Stand one Field Marker within 2 blocks of a Farm Robot's home and another at the opposite corner, up to 17 blocks away.
+
+The robot takes both and works only that rectangle.
+
+With a hoe and seeds it tills the dirt and grass there and plants as it goes. It never tills outside a marked field.
+
+Add water yourself.
+---
+Animal Breeder Robot
+@items robots:breeder_robot minecraft:wheat
+Takes breeding food from a chest near home and feeds pairs of adult animals within 8 blocks.
+
+It stops at 12 animals of a kind, babies included, so pens do not overflow.
+
+Keep the right food in the chest: wheat for cows and sheep, seeds for chickens, carrots for pigs.
+---
+Organizer Robot
+@items robots:organizer_robot minecraft:chest
+Empties an input chest into the other chests within 8 blocks of home.
+
+Unlabelled chests: a stack goes where that item already is, or into an empty chest.
+
+The input chest is the one with an "input" sign, or else the unlabelled chest nearest home.
+
+Items with nowhere to go stay in the input chest.
+---
+Chest Labels
+@items minecraft:oak_sign minecraft:item_frame minecraft:chest
+Put a sign on a chest and write what belongs in it, one label per line:
+
+ores, logs, iron, oak log: items with those words in their name.
+wood, metal, stone, food: wider groups.
+@voltworks: everything from a mod.
+misc: whatever has no other home.
+
+An item frame on a chest names one exact item.

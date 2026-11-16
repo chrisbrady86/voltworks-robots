@@ -1,0 +1,21 @@
+{
+	"schemaVersion": 1,
+	"id": "robots",
+	"version": "${version}",
+	"name": "Robots",
+	"description": "Humanoid worker robots that run on Voltworks Power Cells: they walk, carry items and automate jobs around your base.",
+	"authors": ["Voltworks Team"],
+	"license": "MIT",
+	"environment": "*",
+	"entrypoints": {
+		"main": ["dev.voltworks.robots.Robots"],
+		"client": ["dev.voltworks.robots.client.RobotsClient"]
+	},
+	"depends": {
+		"fabricloader": ">=0.20.1",
+		"minecraft": "~26.3",
+		"java": ">=25",
+		"fabric-api": "*",
+		"voltworks": ">=0.2.0"
+	}
+}

@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "IRI",
+    "PCP",
+    "I I"
+  ],
+  "key": {
+    "I": "minecraft:iron_ingot",
+    "R": "minecraft:redstone",
+    "P": "voltworks:power_cell",
+    "C": "robots:robot_core"
+  },
+  "result": {
+    "id": "robots:farm_robot",
+    "count": 1
+  }
+}

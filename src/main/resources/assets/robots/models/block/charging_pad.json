@@ -1,0 +1,10 @@
+{ "parent": "minecraft:block/block",
+  "textures": { "top": "robots:block/charging_pad_top", "side": "robots:block/charging_pad_side",
+                "particle": "robots:block/charging_pad_top" },
+  "elements": [
+    { "from": [0, 0, 0], "to": [16, 3, 16], "faces": {
+      "up": { "texture": "#top" }, "down": { "texture": "#side", "uv": [0, 14, 16, 16], "cullface": "down" },
+      "north": { "texture": "#side", "cullface": "north" }, "south": { "texture": "#side", "cullface": "south" },
+      "west": { "texture": "#side", "cullface": "west" }, "east": { "texture": "#side", "cullface": "east" } } }
+  ] }
+

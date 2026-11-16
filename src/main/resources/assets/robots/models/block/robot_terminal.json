@@ -1,0 +1,1 @@
+{ "parent": "minecraft:block/cube_column", "textures": { "end": "robots:block/robot_terminal_top", "side": "robots:block/robot_terminal_side" } }

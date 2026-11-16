@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "GGG",
+    "RCR",
+    " P "
+  ],
+  "key": {
+    "G": "minecraft:glass",
+    "R": "minecraft:redstone",
+    "C": "robots:robot_core",
+    "P": "voltworks:power_cell"
+  },
+  "result": {
+    "id": "robots:robot_terminal",
+    "count": 1
+  }
+}
