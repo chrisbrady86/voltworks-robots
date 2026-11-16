@@ -3,6 +3,7 @@ package dev.voltworks.robots.registry;
 import dev.voltworks.robots.Robots;
 import dev.voltworks.robots.entity.BreederRobot;
 import dev.voltworks.robots.entity.FarmRobot;
+import dev.voltworks.robots.entity.LumberjackRobot;
 import dev.voltworks.robots.entity.OrganizerRobot;
 import dev.voltworks.robots.entity.RobotEntity;
 import net.fabricmc.fabric.api.object.builder.v1.entity.FabricDefaultAttributeRegistry;
@@ -17,6 +18,7 @@ public final class RobotEntities {
 	public static final EntityType<FarmRobot> FARM_ROBOT = register("farm_robot", FarmRobot::new);
 	public static final EntityType<BreederRobot> BREEDER_ROBOT = register("breeder_robot", BreederRobot::new);
 	public static final EntityType<OrganizerRobot> ORGANIZER_ROBOT = register("organizer_robot", OrganizerRobot::new);
+	public static final EntityType<LumberjackRobot> LUMBERJACK_ROBOT = register("lumberjack_robot", LumberjackRobot::new);
 
 	private RobotEntities() {
 	}

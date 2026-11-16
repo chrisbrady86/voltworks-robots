@@ -6,6 +6,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
 import net.minecraft.world.entity.EntityType;
@@ -47,6 +49,38 @@ public class BreederRobot extends RobotEntity {
 		super.defineSettings(settings);
 		settings.add(new Setting("animal_range", RobotConfig.breederAnimalRange, 1, RobotConfig.breederAnimalRange, 1));
 		settings.add(new Setting("max_animals", RobotConfig.breederMaxAnimalsPerSpecies, 2, RobotConfig.breederMaxAnimalsPerSpecies, 1));
+		// Which animals to breed: on/off switches
+		for (String kind : KINDS) {
+			settings.add(new Setting("breed_" + kind, 1, 0, 1, 1));
+		}
+		settings.add(new Setting("breed_other", 1, 0, 1, 1));
+	}
+
+	/** The animals with a switch of their own; everything else falls under "other". */
+	private static final List<String> KINDS = List.of("cow", "sheep", "pig", "chicken");
+
+	private boolean breeds(Animal animal) {
+		String kind = BuiltInRegistries.ENTITY_TYPE.getKey(animal.getType()).getPath();
+		return setting("breed_" + (KINDS.contains(kind) ? kind : "other")) == 1;
+	}
+
+	/** Two Field Markers turn the square around home into a pen: only animals inside it count and get bred. */
+	@Override
+	protected boolean usesMarkers() {
+		return true;
+	}
+
+	@Override
+	protected int[] workArea() {
+		return areaOr(setting("animal_range"));
+	}
+
+	@Override
+	protected Component statusDetail() {
+		if (field == null) {
+			return null;
+		}
+		return Component.translatable("message.robots.breeder.pen", field[2] - field[0] + 1, field[3] - field[1] + 1);
 	}
 
 	@Override
@@ -109,9 +143,10 @@ public class BreederRobot extends RobotEntity {
 	}
 
 	private void choosePair(ServerLevel level) {
-		int range = setting("animal_range");
 		int limit = setting("max_animals");
-		List<Animal> animals = level.getEntitiesOfClass(Animal.class, new AABB(getHome()).inflate(range, 4, range));
+		int[] area = workArea();
+		List<Animal> animals = level.getEntitiesOfClass(Animal.class,
+				new AABB(area[0], area[4] - 4, area[1], area[2] + 1, area[4] + 5, area[3] + 1), this::breeds);
 		Map<EntityType<?>, Integer> counts = new HashMap<>();
 		for (Animal animal : animals) {
 			counts.merge(animal.getType(), 1, Integer::sum);

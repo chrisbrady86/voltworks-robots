@@ -1,21 +1,15 @@
 Robots
-@items robots:farm_robot robots:breeder_robot robots:organizer_robot robots:robot_core
-Worker robots that walk around a home spot, carry items and do a job for you.
+@items robots:farm_robot robots:breeder_robot robots:lumberjack_robot robots:organizer_robot robots:robot_terminal
+Use a robot item on a block to stand it there. That block is its home, and you are its owner.
 
-Use a robot item on a block to stand it there. That block is its home.
+Right-click: inventory (9 stacks).
+Punch: what is it doing?
+Sneak + right-click: pause.
+Sneak + punch: pick it up.
 
-Each one holds 9 stacks and runs on energy: 10,000 J when full.
----
-Using a Robot
-@items robots:robot_terminal
-Right-click: open its inventory.
-Punch: ask what it is doing and what it needs.
-Sneak + right-click: pause or resume.
-Sneak + punch: pick it up. It keeps its energy and drops what it carried.
+Robot Terminal: a screen of every robot in range, with pause buttons and each robot's settings.
 
-Robot Terminal: right-click for a screen of every robot in range. Pause them, see what each needs and change its settings.
-
-Nothing else can hurt a robot.
+Only the owner can open, change or take a robot.
 ---
 Charging Robots
 @items robots:charging_pad power_cell copper_cable
@@ -27,21 +21,21 @@ A robot standing on a pad is always topped up. Right-click the pad to see its ch
 ---
 Farm Robot
 @items robots:farm_robot minecraft:wheat_seeds minecraft:iron_hoe
-Harvests ripe crops within 8 blocks of home, replants them and takes the harvest to the nearest chest.
+Harvests and replants ripe crops within 8 blocks of home and takes the harvest to the nearest chest.
 
-Give it seeds and it plants empty farmland. It keeps 16 seeds of each kind and its hoe when it unloads.
+Also cuts pumpkins, melons, sugar cane, cactus and nether wart.
 
-Works with wheat, carrots, potatoes and beetroot.
+With seeds it plants empty farmland. It keeps 16 seeds of each kind and its hoe, and fetches more from a chest when it runs out.
 ---
-Marking a Field
+Marking an Area
 @items robots:field_marker minecraft:iron_hoe
-Stand one Field Marker within 2 blocks of a Farm Robot's home and another at the opposite corner, up to 17 blocks away.
+Stand one Field Marker within 2 blocks of a robot's home and another at the opposite corner, up to 17 blocks away. The robot takes both and works only that rectangle.
 
-The robot takes both and works only that rectangle.
+Farm Robot: a field. With a hoe and seeds it tills the dirt and grass there and plants as it goes.
+Breeder: a pen. Only animals inside count.
+Lumberjack: a tree farm.
 
-With a hoe and seeds it tills the dirt and grass there and plants as it goes. It never tills outside a marked field.
-
-Add water yourself.
+The terminal's Clear field button undoes it.
 ---
 Animal Breeder Robot
 @items robots:breeder_robot minecraft:wheat
@@ -50,6 +44,16 @@ Takes breeding food from a chest near home and feeds pairs of adult animals with
 It stops at 12 animals of a kind, babies included, so pens do not overflow.
 
 Keep the right food in the chest: wheat for cows and sheep, seeds for chickens, carrots for pigs.
+
+Switch kinds of animal on and off at a Robot Terminal.
+---
+Lumberjack Robot
+@items robots:lumberjack_robot minecraft:iron_axe minecraft:oak_sapling
+Give it an axe. It fells trees within 8 blocks of home from the top down, replants a sapling and picks up what the leaves drop.
+
+Logs go to the nearest chest. It keeps its axe and 16 saplings, and takes a new axe from a chest when one breaks.
+
+It only cuts trunks that grow from the ground and have natural leaves. Keep log buildings from touching its trees.
 ---
 Organizer Robot
 @items robots:organizer_robot minecraft:chest

@@ -41,6 +41,9 @@ public class RobotItem extends Item {
 		net.minecraft.nbt.CompoundTag data = stack.getOrDefault(DataComponents.CUSTOM_DATA, CustomData.EMPTY).copyTag();
 		robot.setEnergy(data.getIntOr("energy", 0));
 		robot.loadSettings(data.getCompoundOrEmpty("settings"));
+		if (context.getPlayer() != null) {
+			robot.setOwner(context.getPlayer());
+		}
 		Component name = stack.get(DataComponents.CUSTOM_NAME);
 		if (name != null) {
 			robot.setCustomName(name);

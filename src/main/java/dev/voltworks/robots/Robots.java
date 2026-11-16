@@ -47,6 +47,7 @@ public class Robots implements ModInitializer {
 							output.accept(RobotItems.FARM_ROBOT);
 							output.accept(RobotItems.BREEDER_ROBOT);
 							output.accept(RobotItems.ORGANIZER_ROBOT);
+							output.accept(RobotItems.LUMBERJACK_ROBOT);
 							output.accept(RobotBlocks.CHARGING_PAD);
 							output.accept(RobotBlocks.FIELD_MARKER);
 							output.accept(RobotBlocks.ROBOT_TERMINAL);

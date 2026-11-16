@@ -17,6 +17,8 @@ public final class RobotItems {
 			properties -> new RobotItem(properties.stacksTo(1), () -> RobotEntities.BREEDER_ROBOT));
 	public static final Item ORGANIZER_ROBOT = register("organizer_robot",
 			properties -> new RobotItem(properties.stacksTo(1), () -> RobotEntities.ORGANIZER_ROBOT));
+	public static final Item LUMBERJACK_ROBOT = register("lumberjack_robot",
+			properties -> new RobotItem(properties.stacksTo(1), () -> RobotEntities.LUMBERJACK_ROBOT));
 
 	private RobotItems() {
 	}

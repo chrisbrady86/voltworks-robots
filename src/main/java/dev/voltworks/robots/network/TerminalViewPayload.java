@@ -30,8 +30,8 @@ public record TerminalViewPayload(BlockPos terminal, boolean open, List<Robot> r
 
 	/** State of the robot as packed flags: {@link #RUNNING}, {@link #HAS_FIELD}. */
 	public record Robot(int id, ItemStack icon, Component name, Component status, int energy, int maxEnergy, int flags, int distance,
-			List<Setting> settings) {
-		public static final int RUNNING = 1, HAS_FIELD = 2;
+			String owner, List<Setting> settings) {
+		public static final int RUNNING = 1, HAS_FIELD = 2, LOCKED = 4;
 		public static final StreamCodec<RegistryFriendlyByteBuf, Robot> CODEC = StreamCodec.composite(
 				ByteBufCodecs.VAR_INT, Robot::id,
 				ItemStack.STREAM_CODEC, Robot::icon,
@@ -41,6 +41,7 @@ public record TerminalViewPayload(BlockPos terminal, boolean open, List<Robot> r
 				ByteBufCodecs.VAR_INT, Robot::maxEnergy,
 				ByteBufCodecs.VAR_INT, Robot::flags,
 				ByteBufCodecs.VAR_INT, Robot::distance,
+				ByteBufCodecs.STRING_UTF8, Robot::owner,
 				Setting.CODEC.apply(ByteBufCodecs.list()), Robot::settings,
 				Robot::new);
 
@@ -48,16 +49,21 @@ public record TerminalViewPayload(BlockPos terminal, boolean open, List<Robot> r
 			return (flags & RUNNING) != 0;
 		}
 
+		/** True when the player looking at the terminal may not control this robot (it is someone else's). */
+		public boolean locked() {
+			return (flags & LOCKED) != 0;
+		}
+
 		public boolean hasField() {
 			return (flags & HAS_FIELD) != 0;
 		}
 
-		public static Robot of(RobotEntity robot, BlockPos terminal) {
+		public static Robot of(RobotEntity robot, BlockPos terminal, net.minecraft.world.entity.player.Player viewer) {
 			List<Setting> settings = robot.getSettings().stream()
 					.map(each -> new Setting(each.key(), each.value(), each.min(), each.max(), each.step())).toList();
-			int flags = (robot.isRunning() ? RUNNING : 0) | (robot.hasField() ? HAS_FIELD : 0);
+			int flags = (robot.isRunning() ? RUNNING : 0) | (robot.hasField() ? HAS_FIELD : 0) | (robot.mayControl(viewer) ? 0 : LOCKED);
 			return new Robot(robot.getId(), new ItemStack(robot.getRobotItem()), robot.getName(), robot.getActivityText(), robot.getEnergy(),
-					dev.voltworks.robots.RobotConfig.maxEnergy, flags, (int) Math.round(Math.sqrt(robot.distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(terminal)))), settings);
+					dev.voltworks.robots.RobotConfig.maxEnergy, flags, (int) Math.round(Math.sqrt(robot.distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(terminal)))), robot.getOwnerName(), settings);
 		}
 	}
 

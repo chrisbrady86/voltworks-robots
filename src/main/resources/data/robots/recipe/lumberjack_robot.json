@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "IAI",
+    "PCP",
+    "I I"
+  ],
+  "key": {
+    "I": "minecraft:iron_ingot",
+    "A": "minecraft:iron_axe",
+    "P": "voltworks:power_cell",
+    "C": "robots:robot_core"
+  },
+  "result": {
+    "id": "robots:lumberjack_robot",
+    "count": 1
+  }
+}

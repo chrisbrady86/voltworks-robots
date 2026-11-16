@@ -14,14 +14,15 @@ import org.jspecify.annotations.Nullable;
 
 /**
  * The Robot Terminal's screen: the robots in range on the left; on the right the selected robot's status and energy,
- * buttons to pause it, show its work area and clear its field, and its settings with - and + buttons.
+ * buttons to pause it, show its work area and clear its marked area, and its settings: numbers with - and + buttons,
+ * on/off switches as buttons. A robot that belongs to another player is listed but its buttons are switched off.
  *
  * <p>Everything shown comes from the server in a {@link TerminalViewPayload}; every button sends a
  * {@link TerminalActionPayload} and the server answers with a fresh list. The list is also refreshed once a second.
  */
 public class TerminalScreen extends Screen {
-	public static final int WIDTH = 336, HEIGHT = 206;
-	private static final int HEADER = 20, LIST_W = 122, ROW_H = 22, ROWS = 7, PAD = 6;
+	public static final int WIDTH = 336, HEIGHT = 228;
+	private static final int HEADER = 20, LIST_W = 122, ROW_H = 22, ROWS = 8, PAD = 6;
 	private static final int FRAME = 0xFF11161C, EDGE = 0xFF3C8FB0, BACK = 0xFF1B2530, PANEL = 0xFF131B24, HEADER_BG = 0xFF24313F;
 	private static final int ROW_HOVER = 0xFF223040, ROW_SELECTED = 0xFF2C4A5E;
 	private static final int TITLE = 0xFF8FE3FF, TEXT = 0xFFE6EEF5, MUTED = 0xFF8C9BAA;
@@ -86,25 +87,50 @@ public class TerminalScreen extends Screen {
 		}
 		int x = detailX();
 		int y = top + HEADER + 62;
-		addRenderableWidget(Button.builder(Component.translatable(robot.running() ? "gui.robots.terminal.pause" : "gui.robots.terminal.resume"),
+		boolean mine = !robot.locked();
+		Button pause = addRenderableWidget(Button.builder(Component.translatable(robot.running() ? "gui.robots.terminal.pause" : "gui.robots.terminal.resume"),
 				b -> send(TerminalActionPayload.TOGGLE, "", 0)).bounds(x, y, 58, 16).build());
+		pause.active = mine;
 		addRenderableWidget(Button.builder(Component.translatable("gui.robots.terminal.show_area"),
 				b -> send(TerminalActionPayload.SHOW_AREA, "", 0)).bounds(x + 60, y, 62, 16).build());
 		if (robot.hasField()) {
-			addRenderableWidget(Button.builder(Component.translatable("gui.robots.terminal.clear_field"),
+			Button clear = addRenderableWidget(Button.builder(Component.translatable("gui.robots.terminal.clear_field"),
 					b -> send(TerminalActionPayload.CLEAR_FIELD, "", 0)).bounds(x + 124, y, 68, 16).build());
+			clear.active = mine;
 		}
 		int row = settingsY();
+		int switches = 0;
 		for (TerminalViewPayload.Setting setting : robot.settings()) {
+			if (isSwitch(setting)) {
+				continue;
+			}
 			int right = left + WIDTH - PAD;
 			Button minus = Button.builder(Component.literal("-"), b -> change(setting, -1)).bounds(right - 76, row, 16, 16).build();
 			Button plus = Button.builder(Component.literal("+"), b -> change(setting, 1)).bounds(right - 16, row, 16, 16).build();
-			minus.active = setting.value() > setting.min();
-			plus.active = setting.value() < setting.max();
+			minus.active = mine && setting.value() > setting.min();
+			plus.active = mine && setting.value() < setting.max();
 			addRenderableWidget(minus);
 			addRenderableWidget(plus);
 			row += 18;
 		}
+		// On/off settings: two buttons to a row under the numbers
+		for (TerminalViewPayload.Setting setting : robot.settings()) {
+			if (!isSwitch(setting)) {
+				continue;
+			}
+			Component label = Component.translatable("gui.robots.terminal.switch", Component.translatable("gui.robots.setting." + setting.key()),
+					Component.translatable(setting.value() == 1 ? "gui.robots.terminal.on" : "gui.robots.terminal.off"));
+			Button button = Button.builder(label, b -> send(TerminalActionPayload.SET, setting.key(), 1 - setting.value()))
+					.bounds(x + (switches % 2) * 97, row + 2 + (switches / 2) * 16, 95, 14).build();
+			button.active = mine;
+			addRenderableWidget(button);
+			switches++;
+		}
+	}
+
+	/** A setting that is only ever 0 or 1 is shown as an on/off button. */
+	private static boolean isSwitch(TerminalViewPayload.Setting setting) {
+		return setting.min() == 0 && setting.max() == 1;
 	}
 
 	private int detailX() {
@@ -232,7 +258,11 @@ public class TerminalScreen extends Screen {
 		int w = left + WIDTH - PAD - x;
 		g.item(robot.icon(), x, y);
 		g.text(font, font.plainSubstrByWidth(robot.name().getString(), w - 22), x + 22, y, TEXT, true);
-		g.text(font, Component.translatable("gui.robots.terminal.distance", robot.distance()), x + 22, y + 10, MUTED, false);
+		if (robot.locked()) {
+			g.text(font, Component.translatable("gui.robots.terminal.owner", robot.owner()), x + 22, y + 10, RED, false);
+		} else {
+			g.text(font, Component.translatable("gui.robots.terminal.distance", robot.distance()), x + 22, y + 10, MUTED, false);
+		}
 		g.textWithWordWrap(font, robot.status(), x, y + 22, w, robot.running() ? TEXT : RED, false);
 
 		int barY = y + 44;
@@ -243,6 +273,9 @@ public class TerminalScreen extends Screen {
 
 		int row = settingsY();
 		for (TerminalViewPayload.Setting setting : robot.settings()) {
+			if (isSwitch(setting)) {
+				continue;
+			}
 			g.text(font, Component.translatable("gui.robots.setting." + setting.key()), x, row + 4, TEXT, false);
 			String value = setting.key().endsWith("_percent")
 					? (setting.value() == 0 ? Component.translatable("gui.robots.terminal.off").getString() : setting.value() + "%")

@@ -24,6 +24,7 @@ public final class RobotConfig {
 	public static int chestRange = 8;
 	public static int chestVerticalRange = 4;
 	public static int rechargeBelowPercent = 20;
+	public static int ownerOnly = 1;
 
 	// Robot charging pad
 	public static int padRange = 16;
@@ -54,6 +55,13 @@ public final class RobotConfig {
 	public static int organizerWorkInterval = 20;
 	public static int organizerEnergyPerTrip = 10;
 
+	// Lumberjack robot
+	public static int lumberRadius = 8;
+	public static int lumberVerticalRange = 3;
+	public static int lumberWorkInterval = 40;
+	public static int lumberChopInterval = 8;
+	public static int lumberEnergyPerLog = 10;
+
 	// Robot terminal
 	public static int terminalRange = 16;
 	public static int terminalVerticalRange = 8;
@@ -83,6 +91,8 @@ public final class RobotConfig {
 		chestVerticalRange = value("robot.chestVerticalRange", chestVerticalRange, 0, 8, "How far up and down a robot looks for chests");
 		rechargeBelowPercent = value("robot.rechargeBelowPercent", rechargeBelowPercent, 0, 100,
 				"A robot walks to a Robot Charging Pad when its energy drops below this percentage (0 = never)");
+		ownerOnly = value("robot.ownerOnly", ownerOnly, 0, 1,
+				"1 = only the player who placed a robot (or an operator) can open, pause, change or pick it up; 0 = anyone can");
 
 		section("Robot Charging Pad");
 		padRange = value("pad.range", padRange, 1, 32, "How far from its home spot a robot looks for a charging pad (sideways)");
@@ -95,7 +105,7 @@ public final class RobotConfig {
 		farmVerticalRange = value("farm.verticalRange", farmVerticalRange, 0, 8, "The robot works this far above and below its home spot or marked field");
 		farmWorkInterval = value("farm.workIntervalTicks", farmWorkInterval, 5, 12_000, "Pause between harvests");
 		farmEnergyPerHarvest = value("farm.energyPerHarvest", farmEnergyPerHarvest, 0, 100_000, "Energy used per harvested crop");
-		farmMaxFieldSize = value("farm.maxFieldSize", farmMaxFieldSize, 2, 65, "Longest side of a field marked with Field Markers");
+		farmMaxFieldSize = value("farm.maxFieldSize", farmMaxFieldSize, 2, 65, "Longest side of an area marked with Field Markers (fields, pens, tree farms)");
 		farmFieldWorkInterval = value("farm.fieldWorkIntervalTicks", farmFieldWorkInterval, 2, 12_000, "Pause after tilling or planting one block");
 		farmEnergyPerTill = value("farm.energyPerTill", farmEnergyPerTill, 0, 100_000, "Energy used per tilled block");
 		farmEnergyPerPlant = value("farm.energyPerPlant", farmEnergyPerPlant, 0, 100_000, "Energy used per planted seed");
@@ -113,6 +123,13 @@ public final class RobotConfig {
 		organizerMaxItemsPerTrip = value("organizer.maxItemsPerTrip", organizerMaxItemsPerTrip, 1, 64, "Most items carried from the input chest in one trip");
 		organizerWorkInterval = value("organizer.workIntervalTicks", organizerWorkInterval, 5, 12_000, "Pause between trips");
 		organizerEnergyPerTrip = value("organizer.energyPerTrip", organizerEnergyPerTrip, 0, 100_000, "Energy used per delivery");
+
+		section("Lumberjack Robot");
+		lumberRadius = value("lumber.radius", lumberRadius, 1, 24, "Without a marked area, trees are felled this far from the robot's home spot (sideways)");
+		lumberVerticalRange = value("lumber.verticalRange", lumberVerticalRange, 0, 8, "Trunks are looked for this far above and below the home spot or marked area");
+		lumberWorkInterval = value("lumber.workIntervalTicks", lumberWorkInterval, 5, 12_000, "Pause between jobs");
+		lumberChopInterval = value("lumber.chopIntervalTicks", lumberChopInterval, 1, 1_200, "Time to cut one log");
+		lumberEnergyPerLog = value("lumber.energyPerLog", lumberEnergyPerLog, 0, 100_000, "Energy used per log");
 
 		section("Robot Terminal");
 		terminalRange = value("terminal.range", terminalRange, 1, 64, "How far the terminal reaches (sideways)");

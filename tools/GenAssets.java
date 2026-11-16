@@ -22,6 +22,7 @@ public class GenAssets {
 		robot("farm_robot", rgb(96, 190, 70), rgb(226, 190, 70), Emblem.WHEAT);
 		robot("breeder_robot", rgb(236, 110, 160), rgb(250, 232, 238), Emblem.HEART);
 		robot("organizer_robot", rgb(70, 150, 235), rgb(214, 160, 90), Emblem.CRATE);
+		robot("lumberjack_robot", rgb(226, 132, 52), rgb(150, 104, 62), Emblem.AXE);
 		core();
 		terminal();
 		fieldMarker();
@@ -30,7 +31,7 @@ public class GenAssets {
 		System.out.println("done");
 	}
 
-	enum Emblem { WHEAT, HEART, CRATE }
+	enum Emblem { WHEAT, HEART, CRATE, AXE }
 
 	// Steel palette
 	static final int LIGHT = rgb(206, 212, 220), MID = rgb(168, 176, 188), DARK = rgb(112, 120, 134),
@@ -137,6 +138,7 @@ public class GenAssets {
 			case WHEAT -> new String[]{".b.b", "b.b.", ".a..", ".a.."};
 			case HEART -> new String[]{"a.a.", "aaab", "aaa.", ".a.."};
 			case CRATE -> new String[]{"bbbb", "baab", "baab", "bbbb"};
+			case AXE -> new String[]{"aab.", "aab.", ".b..", ".b.."};
 		};
 		char c = rows[y].charAt(x);
 		return c == 'a' ? accent : c == 'b' ? second : rgb(40, 46, 58);
@@ -303,6 +305,8 @@ public class GenAssets {
 		lang.put("entity.robots.farm_robot", "Farm Robot");
 		lang.put("entity.robots.breeder_robot", "Animal Breeder Robot");
 		lang.put("entity.robots.organizer_robot", "Organizer Robot");
+		lang.put("item.robots.lumberjack_robot", "Lumberjack Robot");
+		lang.put("entity.robots.lumberjack_robot", "Lumberjack Robot");
 		lang.put("block.robots.robot_terminal", "Robot Terminal");
 		lang.put("block.robots.field_marker", "Field Marker");
 		lang.put("message.robots.field_marker.none", "No partner marker within %s blocks. Place another at the opposite corner of the field.");
@@ -318,6 +322,22 @@ public class GenAssets {
 		lang.put("gui.robots.terminal.pause_all", "Pause all");
 		lang.put("gui.robots.terminal.resume_all", "Resume all");
 		lang.put("gui.robots.terminal.off", "off");
+		lang.put("gui.robots.terminal.on", "on");
+		lang.put("gui.robots.terminal.switch", "%s: %s");
+		lang.put("gui.robots.terminal.owner", "Belongs to %s");
+		lang.put("gui.robots.setting.lumber_radius", "Work radius");
+		lang.put("gui.robots.setting.breed_cow", "Cows");
+		lang.put("gui.robots.setting.breed_sheep", "Sheep");
+		lang.put("gui.robots.setting.breed_pig", "Pigs");
+		lang.put("gui.robots.setting.breed_chicken", "Chickens");
+		lang.put("gui.robots.setting.breed_other", "Others");
+		lang.put("message.robots.robot.not_owner", "This robot belongs to %s.");
+		lang.put("message.robots.breeder.pen", "pen %s x %s");
+		lang.put("message.robots.lumber.area", "marked area %s x %s");
+		lang.put("message.robots.activity.fetching_supplies", "fetching supplies");
+		lang.put("message.robots.activity.chopping", "felling a tree");
+		lang.put("message.robots.activity.collecting_drops", "picking up drops");
+		lang.put("message.robots.problem.needs_axe", "needs an axe");
 		lang.put("gui.robots.setting.recharge_percent", "Recharge below");
 		lang.put("gui.robots.setting.farm_radius", "Work radius");
 		lang.put("gui.robots.setting.seeds_kept", "Seeds kept");

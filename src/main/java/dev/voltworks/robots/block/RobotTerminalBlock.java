@@ -34,7 +34,7 @@ public class RobotTerminalBlock extends Block {
 	@Override
 	protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hit) {
 		if (level instanceof ServerLevel serverLevel && player instanceof ServerPlayer serverPlayer) {
-			ServerPlayNetworking.send(serverPlayer, view(serverLevel, pos, true));
+			ServerPlayNetworking.send(serverPlayer, view(serverLevel, pos, true, serverPlayer));
 		}
 		return InteractionResult.SUCCESS;
 	}
@@ -47,9 +47,9 @@ public class RobotTerminalBlock extends Block {
 		return robots;
 	}
 
-	public static TerminalViewPayload view(ServerLevel level, BlockPos terminal, boolean open) {
+	public static TerminalViewPayload view(ServerLevel level, BlockPos terminal, boolean open, ServerPlayer viewer) {
 		return new TerminalViewPayload(terminal, open,
-				robotsInRange(level, terminal).stream().map(robot -> TerminalViewPayload.Robot.of(robot, terminal)).toList());
+				robotsInRange(level, terminal).stream().map(robot -> TerminalViewPayload.Robot.of(robot, terminal, viewer)).toList());
 	}
 
 	/**
@@ -63,7 +63,8 @@ public class RobotTerminalBlock extends Block {
 				|| player.distanceToSqr(net.minecraft.world.phys.Vec3.atCenterOf(terminal)) > USE_DISTANCE * USE_DISTANCE) {
 			return;
 		}
-		List<RobotEntity> robots = robotsInRange(level, terminal);
+		// Other players' robots are listed, but only their owner (or an operator) can change them
+		List<RobotEntity> robots = robotsInRange(level, terminal).stream().filter(each -> each.mayControl(player)).toList();
 		RobotEntity robot = robots.stream().filter(each -> each.getId() == action.robot()).findFirst().orElse(null);
 		switch (action.action()) {
 			case TerminalActionPayload.PAUSE_ALL -> robots.stream().filter(RobotEntity::isRunning).forEach(RobotEntity::toggleRunning);
@@ -77,12 +78,11 @@ public class RobotTerminalBlock extends Block {
 			case TerminalActionPayload.CLEAR_FIELD -> {
 				if (robot != null) robot.clearField();
 			}
-			case TerminalActionPayload.SHOW_AREA -> {
-				if (robot != null) robot.showWorkArea(level);
-			}
+			case TerminalActionPayload.SHOW_AREA -> robotsInRange(level, terminal).stream().filter(each -> each.getId() == action.robot())
+					.forEach(each -> each.showWorkArea(level));
 			default -> {
 			}
 		}
-		ServerPlayNetworking.send(player, view(level, terminal, false));
+		ServerPlayNetworking.send(player, view(level, terminal, false, player));
 	}
 }
