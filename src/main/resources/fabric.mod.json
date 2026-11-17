@@ -6,6 +6,7 @@
 	"description": "Humanoid worker robots that run on Voltworks Power Cells: they walk, carry items and automate jobs around your base.",
 	"authors": ["Voltworks Team"],
 	"license": "MIT",
+	"icon": "assets/robots/icon.png",
 	"environment": "*",
 	"entrypoints": {
 		"main": ["dev.voltworks.robots.Robots"],
