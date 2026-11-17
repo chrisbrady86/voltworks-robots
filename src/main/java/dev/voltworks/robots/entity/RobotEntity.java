@@ -45,8 +45,11 @@ import net.minecraft.world.inventory.ChestMenu;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.FarmlandBlock;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.storage.ValueInput;
 import net.minecraft.world.level.storage.ValueOutput;
 import net.minecraft.world.phys.Vec3;
@@ -62,6 +65,9 @@ public abstract class RobotEntity extends PathfinderMob {
 	private static final int GIVE_UP_AFTER_TICKS = 300;
 	private static final int SKIP_TICKS = 1200;
 	private static final int HOME_WALK_TICKS = 400;
+	private static final int PAD_SEARCH_TICKS = 100, PAD_SEARCH_MAX_TICKS = 1200;
+	/** A new path is worked out at most this often; after this many tries in a row that got the robot no nearer it gives up. */
+	private static final int REPATH_TICKS = 15, NO_PROGRESS_TRIES = 4;
 	private static @Nullable Item powerCell;
 
 	protected final SimpleContainer inventory = new SimpleContainer(INVENTORY_SLOTS) {
@@ -71,11 +77,16 @@ public abstract class RobotEntity extends PathfinderMob {
 		}
 	};
 	private final Map<BlockPos, Long> skipped = new HashMap<>();
+	private final Map<UUID, Long> skippedEntities = new HashMap<>();
 	protected int energy;
 	protected int workCooldown;
 	private boolean running = true;
 	private @Nullable BlockPos home;
 	private int walkTicks;
+	private @Nullable Object walkGoal;
+	private long nextPathAt;
+	private double lastPathDistance;
+	private int noProgress;
 	/** What the robot is doing and what is stopping it, as translation key endings; shown in its status line. */
 	private String activity = "idle";
 	private @Nullable String problem;
@@ -83,6 +94,7 @@ public abstract class RobotEntity extends PathfinderMob {
 	private boolean charging;
 	private int padCooldown;
 	private int padEmptyTicks;
+	private int padMisses;
 	/** Per-robot settings changed at a Robot Terminal, by key; anything not in here follows the config file. */
 	private final Map<String, Integer> overrides = new HashMap<>();
 	/** Area set with Field Markers: {minX, minZ, maxX, maxZ, y}; null = the square around home. */
@@ -135,6 +147,9 @@ public abstract class RobotEntity extends PathfinderMob {
 		if (home == null) {
 			home = blockPosition();
 		}
+		if (isPassenger()) {
+			stopRiding(); // a robot from before they refused boats and minecarts
+		}
 		if (tickCount % 10 == 0) {
 			showCarriedItem();
 		}
@@ -154,9 +169,11 @@ public abstract class RobotEntity extends PathfinderMob {
 			}
 			charging = false;
 			getNavigation().stop();
-		} else if (wantsCharge() && padCooldown == 0) {
-			padCooldown = 100;
+		} else if (wantsCharge() && padCooldown == 0 && !mustFinish()) {
 			padPos = ChargingPadBlock.findNearest(level, getHome(), RobotConfig.padRange, RobotConfig.padVerticalRange);
+			// No pad in range: look again after 5, 10, 20, 40 and then every 60 seconds (the search covers thousands of blocks)
+			padCooldown = padPos != null ? PAD_SEARCH_TICKS : Math.min(PAD_SEARCH_MAX_TICKS, PAD_SEARCH_TICKS << Math.min(padMisses, 4));
+			padMisses = padPos != null ? 0 : padMisses + 1;
 			if (padPos != null) {
 				charging = true;
 				padEmptyTicks = 0;
@@ -230,12 +247,19 @@ public abstract class RobotEntity extends PathfinderMob {
 	 * between them. The robot takes both markers.
 	 */
 	private void linkMarkers(ServerLevel level) {
+		if (field != null) {
+			return; // a marked area is never replaced: its owner presses Clear field first
+		}
 		BlockPos spot = getHome();
 		for (BlockPos pos : BlockPos.betweenClosed(spot.offset(-2, -1, -2), spot.offset(2, 1, 2))) {
 			if (!level.getBlockState(pos).is(RobotBlocks.FIELD_MARKER)) {
 				continue;
 			}
 			BlockPos marker = pos.immutable();
+			if (!mayLink(level, marker)) {
+				continue;
+			}
+			// The partner is a marker of the same player, so somebody else's marker can neither bend the area nor be taken
 			BlockPos partner = FieldMarkerBlock.findPartner(level, marker, RobotConfig.farmMaxFieldSize);
 			if (partner == null) {
 				continue;
@@ -251,6 +275,27 @@ public abstract class RobotEntity extends PathfinderMob {
 			resetTask();
 			return;
 		}
+	}
+
+	/**
+	 * Whether this marker may set the robot's area: it was placed by someone who may control the robot. For a marker
+	 * whose placer is not known (it stood through a server restart) such a player has to be standing within 8 blocks.
+	 */
+	private boolean mayLink(ServerLevel level, BlockPos marker) {
+		if (owner == null || RobotConfig.ownerOnly == 0) {
+			return true;
+		}
+		UUID placer = FieldMarkerBlock.placer(level, marker);
+		if (placer != null) {
+			return placer.equals(owner) || (level.getPlayerByUUID(placer) instanceof Player player && mayControl(player));
+		}
+		Vec3 center = Vec3.atCenterOf(marker);
+		for (Player player : level.players()) {
+			if (player.distanceToSqr(center) <= 64.0 && mayControl(player)) {
+				return true;
+			}
+		}
+		return false;
 	}
 
 	/** {minX, minZ, maxX, maxZ, y} of the marked area, or null when none is marked. */
@@ -280,6 +325,11 @@ public abstract class RobotEntity extends PathfinderMob {
 		if (!getNavigation().isDone()) {
 			getNavigation().stop();
 		}
+	}
+
+	/** True while the robot is in the middle of something it must not walk away from to recharge (a fight with a creeper). */
+	protected boolean mustFinish() {
+		return false;
 	}
 
 	private boolean wantsCharge() {
@@ -398,7 +448,8 @@ public abstract class RobotEntity extends PathfinderMob {
 	protected final boolean hasUnreachable() {
 		long now = level().getGameTime();
 		skipped.values().removeIf(until -> until <= now);
-		return !skipped.isEmpty();
+		skippedEntities.values().removeIf(until -> until <= now);
+		return !skipped.isEmpty() || !skippedEntities.isEmpty();
 	}
 
 	/** Extra text for the end of the status line (the farm robot's field size); null for none. */
@@ -429,11 +480,45 @@ public abstract class RobotEntity extends PathfinderMob {
 			arrived();
 			return true;
 		}
-		if (getNavigation().isDone() || walkTicks % 20 == 0) {
+		if (pathDue(pos.immutable(), Math.sqrt(position().distanceToSqr(Vec3.atCenterOf(pos))))) {
 			BlockPos stand = standNear(pos);
-			getNavigation().moveTo(stand.getX() + 0.5, stand.getY(), stand.getZ() + 0.5, 1, 1.0);
+			if (!getNavigation().moveTo(stand.getX() + 0.5, stand.getY(), stand.getZ() + 0.5, 1, 1.0)) {
+				noProgress++; // no path at all
+			}
 		}
+		return stillWalking();
+	}
+
+	/**
+	 * True when it is time to work out a path to this goal: straight away for a new goal, then every
+	 * {@link #REPATH_TICKS} ticks. Path-finding is the expensive part of walking, and a goal that cannot be reached
+	 * would otherwise be searched for again every tick. Also keeps count of the tries that brought the robot no nearer
+	 * while it had no path left to follow.
+	 */
+	private boolean pathDue(Object goal, double distance) {
+		long now = level().getGameTime();
+		if (!goal.equals(walkGoal)) {
+			walkGoal = goal;
+			noProgress = 0;
+			lastPathDistance = distance;
+			nextPathAt = now + REPATH_TICKS;
+			return true;
+		}
+		if (now < nextPathAt) {
+			return false;
+		}
+		nextPathAt = now + REPATH_TICKS;
+		noProgress = getNavigation().isDone() && distance > lastPathDistance - 0.5 ? noProgress + 1 : 0;
+		lastPathDistance = distance;
+		return true;
+	}
+
+	/** Bookkeeping for a walk that has not arrived. Always false, so callers can return it. */
+	private boolean stillWalking() {
 		walkTicks++;
+		if (noProgress >= NO_PROGRESS_TRIES) {
+			walkTicks = Math.max(walkTicks, GIVE_UP_AFTER_TICKS); // there is no way there: gaveUpWalking() says so now
+		}
 		walkingUntil = level().getGameTime() + 2;
 		awaySince = -1;
 		return false;
@@ -484,17 +569,16 @@ public abstract class RobotEntity extends PathfinderMob {
 			getLookControl().setLookAt(target);
 			return true;
 		}
-		if (getNavigation().isDone() || walkTicks % 20 == 0) {
-			getNavigation().moveTo(target, 1.0);
+		if (pathDue(target, distanceTo(target)) && !getNavigation().moveTo(target, 1.0)) {
+			noProgress++; // no path at all
 		}
-		walkTicks++;
-		walkingUntil = level().getGameTime() + 2;
-		awaySince = -1;
-		return false;
+		return stillWalking();
 	}
 
 	private void arrived() {
 		walkTicks = 0;
+		walkGoal = null;
+		noProgress = 0;
 		failedWalks = 0;
 		getNavigation().stop();
 	}
@@ -527,6 +611,23 @@ public abstract class RobotEntity extends PathfinderMob {
 		return true;
 	}
 
+	/** Leave this animal, monster or dropped item alone for a minute (it could not be reached), wherever it goes meanwhile. */
+	protected final void skip(Entity entity) {
+		skippedEntities.put(entity.getUUID(), level().getGameTime() + SKIP_TICKS);
+	}
+
+	protected final boolean isSkipped(Entity entity) {
+		Long until = skippedEntities.get(entity.getUUID());
+		if (until == null) {
+			return false;
+		}
+		if (until <= level().getGameTime()) {
+			skippedEntities.remove(entity.getUUID());
+			return false;
+		}
+		return true;
+	}
+
 	/** Heads back to the home spot when there is nothing to do. */
 	protected final void idleAtHome() {
 		BlockPos spot = getHome();
@@ -541,7 +642,8 @@ public abstract class RobotEntity extends PathfinderMob {
 			returnHome(serverLevel); // 20 seconds of trying and still not home: there is no way back on foot
 			return;
 		}
-		if (getNavigation().isDone()) {
+		if (getNavigation().isDone() && now >= nextPathAt) {
+			nextPathAt = now + REPATH_TICKS;
 			getNavigation().moveTo(spot.getX() + 0.5, spot.getY(), spot.getZ() + 0.5, 1, 1.0);
 		}
 	}
@@ -704,15 +806,18 @@ public abstract class RobotEntity extends PathfinderMob {
 		return moved;
 	}
 
-	/** The robot visibly holds the first thing it is carrying. */
-	private void showCarriedItem() {
-		ItemStack carried = ItemStack.EMPTY;
+	/** What the robot holds in its hand: the first thing it is carrying, unless a robot shows its own tool. */
+	protected ItemStack shownItem() {
 		for (ItemStack stack : inventory.getItems()) {
 			if (!stack.isEmpty()) {
-				carried = stack;
-				break;
+				return stack;
 			}
 		}
+		return ItemStack.EMPTY;
+	}
+
+	private void showCarriedItem() {
+		ItemStack carried = shownItem();
 		ItemStack shown = getMainHandItem();
 		if (carried.isEmpty() ? !shown.isEmpty() : !ItemStack.isSameItemSameComponents(carried, shown)) {
 			setItemSlot(EquipmentSlot.MAINHAND, carried.isEmpty() ? ItemStack.EMPTY : carried.copyWithCount(1));
@@ -720,6 +825,43 @@ public abstract class RobotEntity extends PathfinderMob {
 	}
 
 	// ---------------- player interaction ----------------
+
+	/** Name tags are applied before {@link #mobInteract} is asked, so somebody else's robot turns them down here. */
+	@Override
+	public InteractionResult interact(Player player, InteractionHand hand, Vec3 location) {
+		if (!level().isClientSide() && player.getItemInHand(hand).is(Items.NAME_TAG) && !mayControl(player)) {
+			player.sendOverlayMessage(Component.translatable("message.robots.robot.not_owner", ownerName));
+			return InteractionResult.SUCCESS;
+		}
+		return super.interact(player, hand, location);
+	}
+
+	/** Robots cannot be led away on a lead. */
+	@Override
+	public boolean canBeLeashed() {
+		return false;
+	}
+
+	/** Robots do not get into boats or minecarts, which would carry them off or hold them fast. */
+	@Override
+	protected boolean canRide(Entity vehicle) {
+		return false;
+	}
+
+	/** Robots stay in the dimension of their home. */
+	@Override
+	public boolean canUsePortal(boolean allowPassengers) {
+		return false;
+	}
+
+	/** Robots step down onto a field without trampling it: farmland only breaks under something that falls onto it. */
+	@Override
+	protected void checkFallDamage(double dy, boolean onGround, BlockState state, BlockPos pos) {
+		if (onGround && state.getBlock() instanceof FarmlandBlock) {
+			fallDistance = 0;
+		}
+		super.checkFallDamage(dy, onGround, state, pos);
+	}
 
 	@Override
 	protected InteractionResult mobInteract(Player player, InteractionHand hand) {
@@ -872,6 +1014,13 @@ public abstract class RobotEntity extends PathfinderMob {
 	/** Drops what it carries, then turns back into its item, keeping its stored energy and name. */
 	private void packUp(ServerLevel level) {
 		dropInventory(level);
+		spawnAtLocation(level, packedItem());
+		playSound(SoundEvents.ITEM_PICKUP, 0.6F, 0.8F);
+		discard(); // not a death: nothing more is dropped
+	}
+
+	/** The robot as its item, with its stored energy, settings and name. */
+	private ItemStack packedItem() {
 		ItemStack item = new ItemStack(robotItem());
 		if (energy > 0 || !overrides.isEmpty()) {
 			CompoundTag tag = new CompoundTag();
@@ -882,9 +1031,7 @@ public abstract class RobotEntity extends PathfinderMob {
 		if (hasCustomName()) {
 			item.set(DataComponents.CUSTOM_NAME, getCustomName());
 		}
-		spawnAtLocation(level, item);
-		playSound(SoundEvents.ITEM_PICKUP, 0.6F, 0.8F);
-		discard();
+		return item;
 	}
 
 	private void dropInventory(ServerLevel level) {
@@ -894,10 +1041,15 @@ public abstract class RobotEntity extends PathfinderMob {
 		}
 	}
 
+	/**
+	 * A robot that dies (/kill, the void) leaves what it carried and itself as an item. This is the part of dying
+	 * that drops things whatever the mob_drops game rule says; picking a robot up is not a death and never gets here.
+	 */
 	@Override
-	protected void dropCustomDeathLoot(ServerLevel level, DamageSource source, boolean killedByPlayer) {
-		super.dropCustomDeathLoot(level, source, killedByPlayer);
+	protected void dropEquipment(ServerLevel level) {
+		super.dropEquipment(level);
 		dropInventory(level);
+		spawnAtLocation(level, packedItem());
 	}
 
 	@Override

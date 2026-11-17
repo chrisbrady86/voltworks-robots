@@ -19,6 +19,14 @@ public final class RobotItems {
 			properties -> new RobotItem(properties.stacksTo(1), () -> RobotEntities.ORGANIZER_ROBOT));
 	public static final Item LUMBERJACK_ROBOT = register("lumberjack_robot",
 			properties -> new RobotItem(properties.stacksTo(1), () -> RobotEntities.LUMBERJACK_ROBOT));
+	public static final Item RANCHER_ROBOT = register("rancher_robot",
+			properties -> new RobotItem(properties.stacksTo(1), () -> RobotEntities.RANCHER_ROBOT));
+	public static final Item BUTCHER_ROBOT = register("butcher_robot",
+			properties -> new RobotItem(properties.stacksTo(1), () -> RobotEntities.BUTCHER_ROBOT));
+	public static final Item GUARD_ROBOT = register("guard_robot",
+			properties -> new RobotItem(properties.stacksTo(1), () -> RobotEntities.GUARD_ROBOT));
+	public static final Item FISHER_ROBOT = register("fisher_robot",
+			properties -> new RobotItem(properties.stacksTo(1), () -> RobotEntities.FISHER_ROBOT));
 
 	private RobotItems() {
 	}

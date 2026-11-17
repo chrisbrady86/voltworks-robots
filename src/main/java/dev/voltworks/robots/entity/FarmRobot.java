@@ -319,10 +319,10 @@ public class FarmRobot extends RobotEntity {
 		List<ItemStack> drops = new ArrayList<>();
 		if (block instanceof CropBlock crop) {
 			drops.addAll(Block.getDrops(state, level, pos, null));
-			level.setBlock(pos, crop.getStateForAge(0), Block.UPDATE_ALL);
+			replant(level, pos, block, crop.getStateForAge(0), drops);
 		} else if (block instanceof NetherWartBlock) {
 			drops.addAll(Block.getDrops(state, level, pos, null));
-			level.setBlock(pos, state.setValue(NetherWartBlock.AGE, 0), Block.UPDATE_ALL);
+			replant(level, pos, block, state.setValue(NetherWartBlock.AGE, 0), drops);
 		} else if (state.is(Blocks.SUGAR_CANE) || state.is(Blocks.CACTUS)) {
 			// Everything from this block up, taken from the top so nothing breaks off and falls
 			BlockPos top = pos;
@@ -342,6 +342,23 @@ public class FarmRobot extends RobotEntity {
 			carry(level, drop);
 		}
 		useEnergy(RobotConfig.farmEnergyPerHarvest);
+	}
+
+	/**
+	 * Replanting a harvested crop costs one seed like planting does: one out of the harvest, or else one the robot
+	 * carries. With neither, the spot is left empty until the robot has seeds.
+	 */
+	private void replant(ServerLevel level, BlockPos pos, Block crop, BlockState young, List<ItemStack> drops) {
+		Predicate<ItemStack> seed = stack -> stack.getItem() instanceof BlockItem item && item.getBlock() == crop;
+		ItemStack paid = drops.stream().filter(seed).findFirst().orElseGet(() -> find(seed));
+		if (paid.isEmpty()) {
+			level.removeBlock(pos, false);
+			return;
+		}
+		paid.shrink(1);
+		drops.removeIf(ItemStack::isEmpty);
+		inventory.setChanged();
+		level.setBlock(pos, young, Block.UPDATE_ALL);
 	}
 
 	private void plant(ServerLevel level, BlockPos pos) {

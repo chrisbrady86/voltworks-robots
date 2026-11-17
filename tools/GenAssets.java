@@ -23,6 +23,10 @@ public class GenAssets {
 		robot("breeder_robot", rgb(236, 110, 160), rgb(250, 232, 238), Emblem.HEART);
 		robot("organizer_robot", rgb(70, 150, 235), rgb(214, 160, 90), Emblem.CRATE);
 		robot("lumberjack_robot", rgb(226, 132, 52), rgb(150, 104, 62), Emblem.AXE);
+		robot("rancher_robot", rgb(214, 176, 120), rgb(245, 245, 240), Emblem.SHEARS);
+		robot("butcher_robot", rgb(196, 58, 58), rgb(236, 226, 214), Emblem.CLEAVER);
+		robot("guard_robot", rgb(132, 84, 214), rgb(232, 200, 90), Emblem.SHIELD);
+		robot("fisher_robot", rgb(38, 172, 160), rgb(250, 146, 60), Emblem.FISH);
 		core();
 		terminal();
 		fieldMarker();
@@ -31,7 +35,7 @@ public class GenAssets {
 		System.out.println("done");
 	}
 
-	enum Emblem { WHEAT, HEART, CRATE, AXE }
+	enum Emblem { WHEAT, HEART, CRATE, AXE, SHEARS, CLEAVER, SHIELD, FISH }
 
 	// Steel palette
 	static final int LIGHT = rgb(206, 212, 220), MID = rgb(168, 176, 188), DARK = rgb(112, 120, 134),
@@ -139,6 +143,10 @@ public class GenAssets {
 			case HEART -> new String[]{"a.a.", "aaab", "aaa.", ".a.."};
 			case CRATE -> new String[]{"bbbb", "baab", "baab", "bbbb"};
 			case AXE -> new String[]{"aab.", "aab.", ".b..", ".b.."};
+			case SHEARS -> new String[]{"b..b", ".bb.", "a..a", "a..a"};
+			case CLEAVER -> new String[]{"bbb.", "bbb.", "..a.", "..a."};
+			case SHIELD -> new String[]{"aaaa", "abba", "abba", ".aa."};
+			case FISH -> new String[]{"....", "bb.b", "bbbb", "bb.b"};
 		};
 		char c = rows[y].charAt(x);
 		return c == 'a' ? accent : c == 'b' ? second : rgb(40, 46, 58);
@@ -307,6 +315,33 @@ public class GenAssets {
 		lang.put("entity.robots.organizer_robot", "Organizer Robot");
 		lang.put("item.robots.lumberjack_robot", "Lumberjack Robot");
 		lang.put("entity.robots.lumberjack_robot", "Lumberjack Robot");
+		lang.put("item.robots.rancher_robot", "Rancher Robot");
+		lang.put("entity.robots.rancher_robot", "Rancher Robot");
+		lang.put("item.robots.butcher_robot", "Butcher Robot");
+		lang.put("entity.robots.butcher_robot", "Butcher Robot");
+		lang.put("item.robots.guard_robot", "Guard Robot");
+		lang.put("entity.robots.guard_robot", "Guard Robot");
+		lang.put("item.robots.fisher_robot", "Fisher Robot");
+		lang.put("entity.robots.fisher_robot", "Fisher Robot");
+		lang.put("gui.robots.setting.rancher_radius", "Work radius");
+		lang.put("gui.robots.setting.shear_sheep", "Shear sheep");
+		lang.put("gui.robots.setting.butcher_radius", "Work radius");
+		lang.put("gui.robots.setting.animals_kept", "Animals kept per kind");
+		lang.put("gui.robots.setting.cull_cow", "Cows");
+		lang.put("gui.robots.setting.cull_sheep", "Sheep");
+		lang.put("gui.robots.setting.cull_pig", "Pigs");
+		lang.put("gui.robots.setting.cull_chicken", "Chickens");
+		lang.put("gui.robots.setting.cull_other", "Others");
+		lang.put("gui.robots.setting.guard_radius", "Guard radius");
+		lang.put("gui.robots.setting.fight_creepers", "Fight creepers");
+		lang.put("gui.robots.setting.fisher_radius", "Water search radius");
+		lang.put("message.robots.activity.shearing", "shearing sheep");
+		lang.put("message.robots.activity.culling", "culling surplus animals");
+		lang.put("message.robots.activity.fighting", "fighting a monster");
+		lang.put("message.robots.activity.guarding", "on guard");
+		lang.put("message.robots.activity.fishing", "fishing");
+		lang.put("message.robots.problem.no_water", "no open water with a bank nearby");
+		lang.put("message.robots.problem.no_animals_here", "no animals in its pen");
 		lang.put("block.robots.robot_terminal", "Robot Terminal");
 		lang.put("block.robots.field_marker", "Field Marker");
 		lang.put("message.robots.field_marker.none", "No partner marker within %s blocks. Place another at the opposite corner of the field.");

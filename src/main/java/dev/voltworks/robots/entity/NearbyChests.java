@@ -6,14 +6,17 @@ import java.util.List;
 import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.Container;
+import net.minecraft.world.RandomizableContainer;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.ChestBlock;
+import net.minecraft.world.level.block.entity.BaseContainerBlockEntity;
+import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.HopperBlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.properties.ChestType;
 import org.jspecify.annotations.Nullable;
 
-/** Chest lookups shared by the robots. A double chest counts once, at its left half. */
+/** Chest lookups shared by the robots. A double chest counts once, at its left half; locked chests and unopened loot chests do not count. */
 public final class NearbyChests {
 	private NearbyChests() {
 	}
@@ -41,7 +44,25 @@ public final class NearbyChests {
 		if (!(state.getBlock() instanceof ChestBlock) || state.getValue(ChestBlock.TYPE) == ChestType.RIGHT) {
 			return null;
 		}
+		if (!usable(level, pos) || (state.getValue(ChestBlock.TYPE) != ChestType.SINGLE && !usable(level, ChestBlock.getConnectedBlockPos(pos, state)))) {
+			return null;
+		}
 		return HopperBlockEntity.getContainerAt(level, pos);
+	}
+
+	/**
+	 * Robots keep out of a chest whose loot has not been rolled yet (looking inside would roll it: a dungeon or village
+	 * chest nobody has opened) and out of a chest locked with a key item.
+	 */
+	private static boolean usable(ServerLevel level, BlockPos pos) {
+		if (!level.hasChunkAt(pos)) {
+			return false;
+		}
+		BlockEntity entity = level.getBlockEntity(pos);
+		if (entity instanceof RandomizableContainer loot && loot.getLootTable() != null) {
+			return false;
+		}
+		return !(entity instanceof BaseContainerBlockEntity container && container.isLocked());
 	}
 
 	/** True when at least one item of the stack fits. */

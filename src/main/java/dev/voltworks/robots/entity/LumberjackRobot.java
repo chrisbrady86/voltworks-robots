@@ -35,11 +35,12 @@ import org.jspecify.annotations.Nullable;
 /**
  * Fells trees with the axe it carries: it walks to a trunk, takes the tree down log by log from the top, replants a
  * sapling where it stood, picks up what the leaves drop and carries everything to a chest. It only touches trunks
- * that grow out of the ground and have natural leaves, so log walls and planted hedges are left alone. It works in a
+ * that grow out of the ground, are no wider than a tree, carry natural leaves at the top and touch nothing a player
+ * builds with (planks, glass, doors, stairs, slabs, stripped logs), so log houses and planted hedges are left alone. It works in a
  * square around home, or in an area marked with two Field Markers.
  */
 public class LumberjackRobot extends RobotEntity {
-	private static final int MAX_LOGS = 200, MAX_SPREAD = 5, SAPLINGS_KEPT = 16;
+	private static final int MAX_LOGS = 200, MAX_SPREAD = 5, SAPLINGS_KEPT = 16, MAX_TRUNK_LOGS = 4, CROWN_LEAVES = 4;
 
 	private @Nullable BlockPos treeBase;
 	/** Logs of the tree being felled, highest first; filled when the robot reaches the trunk. */
@@ -220,7 +221,7 @@ public class LumberjackRobot extends RobotEntity {
 			if (distance >= nearestDistance || isSkipped(pos)) {
 				continue;
 			}
-			if (pos.equals(unfinished) || hasNaturalLeaves(level, treeLogs(level, pos))) {
+			if (pos.equals(unfinished) || isTree(level, pos, treeLogs(level, pos))) {
 				nearest = pos.immutable();
 				nearestDistance = distance;
 			}
@@ -242,7 +243,7 @@ public class LumberjackRobot extends RobotEntity {
 				if (Math.abs(next.getX() - base.getX()) > MAX_SPREAD || Math.abs(next.getZ() - base.getZ()) > MAX_SPREAD) {
 					continue;
 				}
-				if (!seen.contains(next) && level.getBlockState(next).is(BlockTags.LOGS)) {
+				if (!seen.contains(next) && level.hasChunkAt(next) && level.getBlockState(next).is(BlockTags.LOGS)) {
 					BlockPos log = next.immutable();
 					seen.add(log);
 					queue.add(log);
@@ -250,6 +251,59 @@ public class LumberjackRobot extends RobotEntity {
 			}
 		}
 		return found;
+	}
+
+	/**
+	 * Whether these connected logs are a tree rather than something built of logs: at most four logs at ground level
+	 * (a 2x2 trunk; a wall has more), no stripped logs, nothing a player builds with against any of them, natural
+	 * leaves touching the logs and more of them around the highest log (a roofed-over log wall has none there).
+	 */
+	private static boolean isTree(ServerLevel level, BlockPos base, List<BlockPos> tree) {
+		int atBase = 0;
+		BlockPos top = base;
+		for (BlockPos log : tree) {
+			if (log.getY() == base.getY() && ++atBase > MAX_TRUNK_LOGS) {
+				return false;
+			}
+			if (log.getY() > top.getY()) {
+				top = log;
+			}
+			if (blockName(level.getBlockState(log)).startsWith("stripped_")) {
+				return false;
+			}
+			for (net.minecraft.core.Direction side : net.minecraft.core.Direction.values()) {
+				BlockPos beside = log.relative(side);
+				if (level.hasChunkAt(beside) && isBuilt(level.getBlockState(beside))) {
+					return false;
+				}
+			}
+		}
+		return hasNaturalLeaves(level, tree) && naturalLeavesAround(level, top) >= CROWN_LEAVES;
+	}
+
+	private static String blockName(BlockState state) {
+		return net.minecraft.core.registries.BuiltInRegistries.BLOCK.getKey(state.getBlock()).getPath();
+	}
+
+	/** What players build with and trees never grow against: planks, stairs, slabs, doors, trapdoors, walls, beds, glass. */
+	private static boolean isBuilt(BlockState state) {
+		return state.is(BlockTags.PLANKS) || state.is(BlockTags.STAIRS) || state.is(BlockTags.SLABS) || state.is(BlockTags.DOORS)
+				|| state.is(BlockTags.TRAPDOORS) || state.is(BlockTags.WALLS) || state.is(BlockTags.BEDS) || blockName(state).contains("glass");
+	}
+
+	/** Leaf blocks that grew there, in the 5x5 around the highest log from one block below it to two above. */
+	private static int naturalLeavesAround(ServerLevel level, BlockPos top) {
+		int leaves = 0;
+		for (BlockPos pos : BlockPos.betweenClosed(top.offset(-2, -1, -2), top.offset(2, 2, 2))) {
+			if (!level.hasChunkAt(pos)) {
+				continue;
+			}
+			BlockState state = level.getBlockState(pos);
+			if (state.getBlock() instanceof LeavesBlock && !state.getValue(LeavesBlock.PERSISTENT)) {
+				leaves++;
+			}
+		}
+		return leaves;
 	}
 
 	/** At least three leaf blocks that grew there (not placed by a player) touching the logs. */
@@ -360,7 +414,7 @@ public class LumberjackRobot extends RobotEntity {
 		double nearestDistance = Double.MAX_VALUE;
 		for (ItemEntity item : level.getEntitiesOfClass(ItemEntity.class, box, each -> each.isAlive() && each.onGround() && isTreeDrop(each.getItem()))) {
 			double distance = item.distanceToSqr(this);
-			if (distance < nearestDistance && !isSkipped(item.blockPosition())) {
+			if (distance < nearestDistance && !isSkipped(item)) {
 				nearest = item;
 				nearestDistance = distance;
 			}
@@ -375,7 +429,7 @@ public class LumberjackRobot extends RobotEntity {
 		}
 		if (!walkTo(item, 1.8)) {
 			if (gaveUpWalking()) {
-				skip(item.blockPosition());
+				skip(item);
 				pickup = null;
 			}
 			return;

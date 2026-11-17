@@ -32,5 +32,9 @@ public class RobotsClient implements ClientModInitializer {
 		EntityRenderers.register(RobotEntities.BREEDER_ROBOT, context -> new RobotRenderer(context, "breeder_robot"));
 		EntityRenderers.register(RobotEntities.ORGANIZER_ROBOT, context -> new RobotRenderer(context, "organizer_robot"));
 		EntityRenderers.register(RobotEntities.LUMBERJACK_ROBOT, context -> new RobotRenderer(context, "lumberjack_robot"));
+		EntityRenderers.register(RobotEntities.RANCHER_ROBOT, context -> new RobotRenderer(context, "rancher_robot"));
+		EntityRenderers.register(RobotEntities.BUTCHER_ROBOT, context -> new RobotRenderer(context, "butcher_robot"));
+		EntityRenderers.register(RobotEntities.GUARD_ROBOT, context -> new RobotRenderer(context, "guard_robot"));
+		EntityRenderers.register(RobotEntities.FISHER_ROBOT, context -> new RobotRenderer(context, "fisher_robot"));
 	}
 }

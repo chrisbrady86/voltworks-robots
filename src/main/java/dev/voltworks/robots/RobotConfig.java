@@ -62,6 +62,33 @@ public final class RobotConfig {
 	public static int lumberChopInterval = 8;
 	public static int lumberEnergyPerLog = 10;
 
+	// Rancher robot
+	public static int rancherRadius = 8;
+	public static int rancherWorkInterval = 40;
+	public static int rancherEnergyPerShear = 10;
+
+	// Butcher robot
+	public static int butcherRadius = 8;
+	public static int butcherAnimalsKept = 6;
+	public static int butcherWorkInterval = 100;
+	public static int butcherDamage = 10;
+	public static int butcherHitInterval = 10;
+	public static int butcherEnergyPerHit = 10;
+
+	// Guard robot
+	public static int guardRadius = 12;
+	public static int guardVerticalRange = 6;
+	public static int guardDamage = 8;
+	public static int guardHitInterval = 10;
+	public static int guardEnergyPerHit = 10;
+
+	// Fisher robot
+	public static int fisherRadius = 6;
+	public static int fisherVerticalRange = 3;
+	public static int fisherMinWait = 200;
+	public static int fisherMaxWait = 600;
+	public static int fisherEnergyPerCatch = 15;
+
 	// Robot terminal
 	public static int terminalRange = 16;
 	public static int terminalVerticalRange = 8;
@@ -130,6 +157,33 @@ public final class RobotConfig {
 		lumberWorkInterval = value("lumber.workIntervalTicks", lumberWorkInterval, 5, 12_000, "Pause between jobs");
 		lumberChopInterval = value("lumber.chopIntervalTicks", lumberChopInterval, 1, 1_200, "Time to cut one log");
 		lumberEnergyPerLog = value("lumber.energyPerLog", lumberEnergyPerLog, 0, 100_000, "Energy used per log");
+
+		section("Rancher Robot");
+		rancherRadius = value("rancher.radius", rancherRadius, 1, 24, "Without a marked pen, sheep are sheared and drops picked up this far from the robot's home spot");
+		rancherWorkInterval = value("rancher.workIntervalTicks", rancherWorkInterval, 5, 12_000, "Pause between jobs");
+		rancherEnergyPerShear = value("rancher.energyPerShear", rancherEnergyPerShear, 0, 100_000, "Energy used per sheared sheep");
+
+		section("Butcher Robot");
+		butcherRadius = value("butcher.radius", butcherRadius, 1, 24, "Without a marked pen, animals are counted and culled this far from the robot's home spot");
+		butcherAnimalsKept = value("butcher.animalsKept", butcherAnimalsKept, 2, 200, "Animals of each kind left alive (adults and babies) for a new robot; players can raise it at a terminal");
+		butcherWorkInterval = value("butcher.workIntervalTicks", butcherWorkInterval, 20, 72_000, "Pause between culls");
+		butcherDamage = value("butcher.damage", butcherDamage, 1, 1_000, "Damage per hit");
+		butcherHitInterval = value("butcher.hitIntervalTicks", butcherHitInterval, 1, 1_200, "Time between hits");
+		butcherEnergyPerHit = value("butcher.energyPerHit", butcherEnergyPerHit, 0, 100_000, "Energy used per hit");
+
+		section("Guard Robot");
+		guardRadius = value("guard.radius", guardRadius, 1, 32, "Hostile mobs are fought this far from the robot's home spot (sideways)");
+		guardVerticalRange = value("guard.verticalRange", guardVerticalRange, 0, 16, "How far up and down the robot looks for hostile mobs");
+		guardDamage = value("guard.damage", guardDamage, 1, 1_000, "Damage per hit");
+		guardHitInterval = value("guard.hitIntervalTicks", guardHitInterval, 1, 1_200, "Time between hits");
+		guardEnergyPerHit = value("guard.energyPerHit", guardEnergyPerHit, 0, 100_000, "Energy used per hit");
+
+		section("Fisher Robot");
+		fisherRadius = value("fisher.radius", fisherRadius, 1, 16, "The robot looks for open water this far from its home spot (sideways)");
+		fisherVerticalRange = value("fisher.verticalRange", fisherVerticalRange, 0, 8, "How far up and down it looks for water");
+		fisherMinWait = value("fisher.minWaitTicks", fisherMinWait, 20, 72_000, "Shortest wait for a bite");
+		fisherMaxWait = Math.max(fisherMinWait, value("fisher.maxWaitTicks", fisherMaxWait, 20, 72_000, "Longest wait for a bite"));
+		fisherEnergyPerCatch = value("fisher.energyPerCatch", fisherEnergyPerCatch, 0, 100_000, "Energy used per catch");
 
 		section("Robot Terminal");
 		terminalRange = value("terminal.range", terminalRange, 1, 64, "How far the terminal reaches (sideways)");

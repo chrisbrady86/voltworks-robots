@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": ["IXI", "PCP", "I I"],
+  "key": {
+    "I": "minecraft:iron_ingot",
+    "P": "voltworks:power_cell",
+    "C": "robots:robot_core",
+    "X": "minecraft:iron_sword"
+  },
+  "result": { "id": "robots:butcher_robot", "count": 1 }
+}

@@ -1,0 +1,11 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": ["ISI", "PCP", "I I"],
+  "key": {
+    "I": "minecraft:iron_ingot",
+    "P": "voltworks:power_cell",
+    "C": "robots:robot_core",
+    "S": "minecraft:shears"
+  },
+  "result": { "id": "robots:rancher_robot", "count": 1 }
+}

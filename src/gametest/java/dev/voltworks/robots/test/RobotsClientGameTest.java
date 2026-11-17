@@ -44,6 +44,8 @@ import net.minecraft.world.phys.Vec3;
  */
 public class RobotsClientGameTest implements FabricClientGameTest {
 	private static final int FARM_X = 0, BREED_X = 30, SORT_X = 60, SHOW_X = 90, FIELD_X = -30, LABEL_X = 30, LABEL_Z = 30, LUMBER_X = 0, LUMBER_Z = 30;
+	/** Second row: the rancher, butcher, guard and fisher platforms, and a line-up of those four. */
+	private static final int JOBS_Z = -30, RANCH_X = 0, BUTCH_X = 30, GUARD_X = 60, FISH_X = 90, SHOW2_X = 120;
 
 	@Override
 	public void runTest(ClientGameTestContext context) {
@@ -79,10 +81,19 @@ public class RobotsClientGameTest implements FabricClientGameTest {
 			view(world, LUMBER_X + 5, 6, LUMBER_Z - 9, 25, 25);
 			context.waitTicks(20);
 			context.takeScreenshot("robots-lumberjack");
+			for (String[] shot : new String[][]{{"ranch", "" + RANCH_X}, {"butcher", "" + BUTCH_X}, {"guard", "" + GUARD_X}, {"fisher", "" + FISH_X}}) {
+				view(world, Integer.parseInt(shot[1]) + 3, 5, JOBS_Z - 7, 20, 30);
+				context.waitTicks(20);
+				context.takeScreenshot("robots-" + shot[0]);
+			}
+			view(world, SHOW2_X, 0, JOBS_Z + 4, 180, 5);
+			context.waitTicks(20);
+			context.takeScreenshot("robots-lineup-new");
 			view(world, BREED_X, 3, -4, 0, 20); // back to the middle so every platform is loaded for the checks
 			context.waitTicks(40);
 
 			List<String> failures = new ArrayList<>(world.getServer().computeOnServer(RobotsClientGameTest::check));
+			world.getServer().runOnServer(RobotsClientGameTest::buildLate); // looked at by checkLate further down
 
 			// Robot Terminal: its actions, then its screen
 			failures.addAll(world.getServer().computeOnServer(RobotsClientGameTest::checkTerminal));
@@ -112,6 +123,8 @@ public class RobotsClientGameTest implements FabricClientGameTest {
 				return open ? List.<String>of() : List.of("Right-clicking a robot should open its inventory");
 			}));
 			failures.addAll(world.getServer().computeOnServer(RobotsClientGameTest::checkPickUp));
+			context.waitTicks(60); // the robots look for markers every 2 seconds
+			failures.addAll(world.getServer().computeOnServer(RobotsClientGameTest::checkLate));
 
 			// The Voltworks Guide includes the robots' pages, and all of them fit
 			context.waitTicks(10);
@@ -119,7 +132,7 @@ public class RobotsClientGameTest implements FabricClientGameTest {
 			int first = titles.indexOf("Robots");
 			if (first < 0 || !titles.contains("Chest Labels")) failures.add("The Voltworks Guide should include the robots' pages: " + titles);
 			failures.addAll(context.computeOnClient(client -> dev.voltworks.client.GuideScreen.problems()));
-			for (String shot : new String[]{"Robots", "Marking an Area", "Lumberjack Robot"}) {
+			for (String shot : new String[]{"Robots", "Marking an Area", "Animal Robots", "Guard and Fisher"}) {
 				int page = Math.max(0, titles.indexOf(shot));
 				context.runOnClient(client -> client.gui.setScreen(new dev.voltworks.client.GuideScreen(page)));
 				context.waitTicks(10);
@@ -313,6 +326,15 @@ public class RobotsClientGameTest implements FabricClientGameTest {
 		oak(level, lumber.offset(-2, 0, 0));
 		set(level, lumber.offset(1, 0, -2), RobotBlocks.FIELD_MARKER);
 		set(level, lumber.offset(5, 0, 5), RobotBlocks.FIELD_MARKER);
+		// A log post inside the area with leaves on it and a plank against it: built, not grown, so it has to stay
+		for (int y = 0; y < 3; y++) {
+			set(level, lumber.offset(4, y, -1), Blocks.OAK_LOG);
+		}
+		set(level, lumber.offset(4, 1, 0), Blocks.OAK_PLANKS);
+		var postLeaves = Blocks.OAK_LEAVES.defaultBlockState().setValue(net.minecraft.world.level.block.LeavesBlock.DISTANCE, 1);
+		for (BlockPos leaf : List.of(lumber.offset(4, 3, -1), lumber.offset(3, 2, -1), lumber.offset(5, 2, -1), lumber.offset(4, 2, -2), lumber.offset(4, 2, 0))) {
+			level.setBlockAndUpdate(leaf, postLeaves);
+		}
 		chest(level, lumber.offset(2, 0, -5)).setItem(0, new ItemStack(Items.IRON_AXE));
 		spawn(level, RobotEntities.LUMBERJACK_ROBOT, lumber.offset(0, 0, -3), 3000).getInventory().setItem(0, new ItemStack(Items.OAK_SAPLING));
 		// Stuck: a robot walled into a glass cell away from its home has to end up back home
@@ -356,6 +378,8 @@ public class RobotsClientGameTest implements FabricClientGameTest {
 		set(level, field.offset(5, 0, -4), voltworksBlock("solar_panel"));
 		((ChargingPadBlockEntity) level.getBlockEntity(field.offset(3, 0, -4))).receiveEnergy(3000, false);
 		spawn(level, RobotEntities.ORGANIZER_ROBOT, field.offset(2, 0, -1), 0);
+
+		buildJobs(server, level, o);
 	}
 
 	private static int count(Container container, Item item) {
@@ -464,12 +488,15 @@ public class RobotsClientGameTest implements FabricClientGameTest {
 		dev.voltworks.robots.entity.LumberjackRobot jack = level.getEntitiesOfClass(dev.voltworks.robots.entity.LumberjackRobot.class, new AABB(lumber).inflate(7, 8, 7)).get(0);
 		Container lumberChest = (Container) level.getBlockEntity(lumber.offset(2, 0, -5));
 		int logsCut = count(lumberChest, Items.OAK_LOG) + count(jack.getInventory(), Items.OAK_LOG);
-		int logsLeftInside = 0, logsLeftOutside = 0;
+		int logsLeftInside = 0, logsLeftOutside = 0, postLogs = 0;
 		for (BlockPos pos : BlockPos.betweenClosed(lumber.offset(-5, 0, -5), lumber.offset(5, 9, 5))) {
 			if (level.getBlockState(pos).is(Blocks.OAK_LOG)) {
-				if (pos.getX() >= lumber.getX() + 1) logsLeftInside++; else logsLeftOutside++;
+				if (pos.getX() == lumber.getX() + 4 && pos.getZ() == lumber.getZ() - 1) postLogs++;
+				else if (pos.getX() >= lumber.getX() + 1) logsLeftInside++;
+				else logsLeftOutside++;
 			}
 		}
+		if (postLogs != 3) fails.add("Lumberjack: a log post with a plank against it is a building and must be left standing (" + postLogs + " of 3 logs left)");
 		ItemStack axe = jack.getInventory().getItems().stream().filter(s -> s.is(Items.IRON_AXE)).findFirst().orElse(ItemStack.EMPTY);
 		boolean replanted = level.getBlockState(lumber.offset(3, 0, 2)).is(Blocks.OAK_SAPLING);
 		System.out.println("[robots-test] lumberjack: logs cut " + logsCut + " (chest " + count(lumberChest, Items.OAK_LOG) + "), left inside " + logsLeftInside
@@ -536,6 +563,270 @@ public class RobotsClientGameTest implements FabricClientGameTest {
 		if (!labelInput.isEmpty()) fails.add("Labels: the input chest is not empty");
 		if (!spare.isEmpty()) fails.add("Labels: the unlabelled spare chest should stay empty while a misc chest has room");
 
+		checkJobs(fails, server, level, o);
+
+		return fails;
+	}
+
+	private static <T extends net.minecraft.world.entity.Mob> T mob(ServerLevel level, EntityType<T> type, BlockPos pos) {
+		T mob = type.create(level, EntitySpawnReason.COMMAND);
+		mob.snapTo(pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, 0, 0);
+		mob.setPersistenceRequired();
+		level.addFreshEntity(mob);
+		return mob;
+	}
+
+	/** Second row: a sheep pen, an overfull cow pen, monsters and a pond, each with its robot and a chest. */
+	private static void buildJobs(MinecraftServer server, ServerLevel level, BlockPos o) {
+		command(server, "difficulty normal"); // monsters vanish on peaceful
+		dev.voltworks.robots.RobotConfig.fisherMinWait = 20; // quick bites so the test sees several catches
+		dev.voltworks.robots.RobotConfig.fisherMaxWait = 40;
+
+		// Rancher: three woolly sheep and two eggs lying in the pen
+		BlockPos ranch = o.offset(RANCH_X, 0, JOBS_Z);
+		platform(level, ranch, Blocks.GRASS_BLOCK);
+		for (int i = 0; i < 3; i++) {
+			mob(level, net.minecraft.world.entity.EntityTypes.SHEEP, ranch.offset(-2 + i * 2, 0, 3));
+		}
+		net.minecraft.world.entity.item.ItemEntity eggs = new net.minecraft.world.entity.item.ItemEntity(level, ranch.getX() + 3.5, ranch.getY(), ranch.getZ() + 1.5,
+				new ItemStack(Items.EGG, 2));
+		eggs.setUnlimitedLifetime();
+		level.addFreshEntity(eggs);
+		chest(level, ranch.offset(-4, 0, -2));
+		spawn(level, RobotEntities.RANCHER_ROBOT, ranch.offset(0, 0, -2), 2000);
+
+		// Butcher: five plain adult cows, a calf and a named cow; it keeps 2, so only the five plain adults go
+		BlockPos butch = o.offset(BUTCH_X, 0, JOBS_Z);
+		platform(level, butch, Blocks.GRASS_BLOCK);
+		for (int i = 0; i < 5; i++) {
+			mob(level, net.minecraft.world.entity.EntityTypes.COW, butch.offset(-3 + i * 1, 0, 3));
+		}
+		mob(level, net.minecraft.world.entity.EntityTypes.COW, butch.offset(3, 0, 1)).setAge(-24000);
+		mob(level, net.minecraft.world.entity.EntityTypes.COW, butch.offset(-3, 0, 1)).setCustomName(net.minecraft.network.chat.Component.literal("Daisy"));
+		// Three tamed horses and three saddled pigs: one more than it keeps of each, and all of them somebody's
+		ServerPlayer rider = server.getPlayerList().getPlayers().get(0);
+		for (int i = 0; i < 3; i++) {
+			var horse = mob(level, net.minecraft.world.entity.EntityTypes.HORSE, butch.offset(4, 0, 4 - i * 2));
+			horse.setTamed(true);
+			horse.setOwner(rider);
+			mob(level, net.minecraft.world.entity.EntityTypes.PIG, butch.offset(2 + i, 0, -4))
+					.setItemSlot(net.minecraft.world.entity.EquipmentSlot.SADDLE, new ItemStack(Items.SADDLE));
+		}
+		loose(level, butch.offset(-4, 0, 1), new ItemStack(Items.GOLDEN_APPLE)); // somebody lost this: not the butcher to take
+		chest(level, butch.offset(-4, 0, -2));
+		var butcher = spawn(level, RobotEntities.BUTCHER_ROBOT, butch.offset(0, 0, -2), 2000);
+		butcher.setSetting("animals_kept", 2);
+		butcher.setSetting("cull_other", 1);
+
+		// Guard: two husks (no burning at noon) and a creeper it has been told to leave alone
+		BlockPos guard = o.offset(GUARD_X, 0, JOBS_Z);
+		platform(level, guard, Blocks.STONE);
+		mob(level, net.minecraft.world.entity.EntityTypes.HUSK, guard.offset(-3, 0, 3));
+		mob(level, net.minecraft.world.entity.EntityTypes.HUSK, guard.offset(3, 0, 3));
+		mob(level, net.minecraft.world.entity.EntityTypes.CREEPER, guard.offset(0, 0, 4));
+		// Somebody's named husk and a piglin that is after nobody: both stay
+		mob(level, net.minecraft.world.entity.EntityTypes.HUSK, guard.offset(-4, 0, 0)).setCustomName(net.minecraft.network.chat.Component.literal("Bob"));
+		mob(level, net.minecraft.world.entity.EntityTypes.PIGLIN, guard.offset(4, 0, 0)).setImmuneToZombification(true);
+		loose(level, guard.offset(-2, 0, -4), new ItemStack(Items.ARROW, 5)); // not from a monster it killed
+		chest(level, guard.offset(-4, 0, -2));
+		spawn(level, RobotEntities.GUARD_ROBOT, guard.offset(0, 0, -2), 2000).setSetting("fight_creepers", 0);
+
+		// Fisher: a 3x3 pond sunk into the floor (stone underneath so it does not pour off the platform)
+		BlockPos fish = o.offset(FISH_X, 0, JOBS_Z);
+		platform(level, fish, Blocks.STONE);
+		for (int x = 1; x <= 3; x++) {
+			for (int z = 1; z <= 3; z++) {
+				set(level, fish.offset(x, -2, z), Blocks.STONE);
+				set(level, fish.offset(x, -1, z), Blocks.WATER);
+			}
+		}
+		chest(level, fish.offset(-4, 0, -2));
+		spawn(level, RobotEntities.FISHER_ROBOT, fish.offset(0, 0, -2), 3000);
+
+		// Line-up of the four new robots, unpowered so they stand still
+		BlockPos show = o.offset(SHOW2_X, 0, JOBS_Z);
+		platform(level, show, Blocks.SMOOTH_STONE);
+		spawn(level, RobotEntities.RANCHER_ROBOT, show.offset(-3, 0, 0), 0);
+		spawn(level, RobotEntities.BUTCHER_ROBOT, show.offset(-1, 0, 0), 0);
+		spawn(level, RobotEntities.GUARD_ROBOT, show.offset(1, 0, 0), 0);
+		spawn(level, RobotEntities.FISHER_ROBOT, show.offset(3, 0, 0), 0);
+	}
+
+	/** An item lying on the ground that no player threw and no robot dropped. */
+	private static void loose(ServerLevel level, BlockPos pos, ItemStack stack) {
+		level.addFreshEntity(new net.minecraft.world.entity.item.ItemEntity(level, pos.getX() + 0.5, pos.getY(), pos.getZ() + 0.5, stack, 0, 0, 0));
+	}
+
+	private static boolean lying(ServerLevel level, BlockPos center, Item item) {
+		return !level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, new AABB(center).inflate(7, 4, 7), e -> e.isAlive() && e.getItem().is(item)).isEmpty();
+	}
+
+	private static <T extends RobotEntity> T robotAt(ServerLevel level, Class<T> type, BlockPos center) {
+		List<T> robots = level.getEntitiesOfClass(type, new AABB(center).inflate(7, 4, 7), r -> r.getEnergy() > 0);
+		if (robots.isEmpty()) throw new AssertionError("No powered " + type.getSimpleName() + " on its platform");
+		return robots.get(0);
+	}
+
+	private static int stored(ServerLevel level, BlockPos chest, RobotEntity robot, java.util.function.Predicate<ItemStack> wanted) {
+		int n = 0;
+		for (Container c : List.of((Container) level.getBlockEntity(chest), robot.getInventory())) {
+			for (int i = 0; i < c.getContainerSize(); i++) {
+				if (wanted.test(c.getItem(i))) n += c.getItem(i).getCount();
+			}
+		}
+		return n;
+	}
+
+	private static void checkJobs(List<String> fails, MinecraftServer server, ServerLevel level, BlockPos o) {
+		// Rancher
+		BlockPos ranch = o.offset(RANCH_X, 0, JOBS_Z);
+		var rancher = robotAt(level, dev.voltworks.robots.entity.RancherRobot.class, ranch);
+		int wool = stored(level, ranch.offset(-4, 0, -2), rancher, s -> s.is(net.minecraft.tags.ItemTags.WOOL));
+		int eggs = stored(level, ranch.offset(-4, 0, -2), rancher, s -> s.is(Items.EGG));
+		long woolly = level.getEntitiesOfClass(net.minecraft.world.entity.animal.sheep.Sheep.class, new AABB(ranch).inflate(7, 4, 7), s -> !s.isSheared()).size();
+		System.out.println("[robots-test] rancher: wool " + wool + ", eggs " + eggs + ", unsheared sheep " + woolly + ", energy " + rancher.getEnergy()
+				+ ", status " + rancher.getStatus().getString());
+		if (wool < 3) fails.add("Rancher: expected the wool of 3 sheep, got " + wool);
+		if (eggs != 2) fails.add("Rancher: the 2 eggs in the pen should be picked up (got " + eggs + ")");
+		if (((Container) level.getBlockEntity(ranch.offset(-4, 0, -2))).isEmpty()) {
+			fails.add("Rancher: nothing was carried to the chest");
+		}
+
+		// Butcher
+		BlockPos butch = o.offset(BUTCH_X, 0, JOBS_Z);
+		var butcher = robotAt(level, dev.voltworks.robots.entity.ButcherRobot.class, butch);
+		List<Animal> penned = level.getEntitiesOfClass(Animal.class, new AABB(butch).inflate(7, 4, 7), Animal::isAlive);
+		List<Animal> cows = penned.stream().filter(a -> a.getType() == net.minecraft.world.entity.EntityTypes.COW).toList();
+		long horses = penned.stream().filter(a -> a.getType() == net.minecraft.world.entity.EntityTypes.HORSE).count();
+		long pigs = penned.stream().filter(a -> a.getType() == net.minecraft.world.entity.EntityTypes.PIG).count();
+		System.out.println("[robots-test] butcher: tamed horses left " + horses + ", saddled pigs left " + pigs);
+		if (horses != 3) fails.add("Butcher: a tamed horse must never be culled (" + horses + " of 3 left)");
+		if (pigs != 3) fails.add("Butcher: a saddled pig must never be culled (" + pigs + " of 3 left)");
+		boolean calf = cows.stream().anyMatch(Animal::isBaby);
+		boolean daisy = cows.stream().anyMatch(Animal::hasCustomName);
+		int beef = stored(level, butch.offset(-4, 0, -2), butcher, s -> s.is(Items.BEEF));
+		System.out.println("[robots-test] butcher: cows left " + cows.size() + " (calf " + calf + ", named " + daisy + "), beef " + beef
+				+ ", leather " + stored(level, butch.offset(-4, 0, -2), butcher, s -> s.is(Items.LEATHER)) + ", energy " + butcher.getEnergy()
+				+ ", status " + butcher.getStatus().getString());
+		if (cows.size() != 2 || !calf || !daisy) fails.add("Butcher: only the calf and the named cow should be left (" + cows.size() + " cows left)");
+		if (stored(level, butch.offset(-4, 0, -2), butcher, s -> s.is(Items.GOLDEN_APPLE)) != 0 || !lying(level, butch, Items.GOLDEN_APPLE)) {
+			fails.add("Butcher: food lying in the pen that did not come from its culling must stay where it is");
+		}
+		if (beef < 5) fails.add("Butcher: expected the beef of 5 cows, got " + beef);
+
+		// Guard
+		BlockPos guardPos = o.offset(GUARD_X, 0, JOBS_Z);
+		var guard = robotAt(level, dev.voltworks.robots.entity.GuardRobot.class, guardPos);
+		int husks = level.getEntitiesOfClass(net.minecraft.world.entity.monster.zombie.Husk.class, new AABB(guardPos).inflate(7, 4, 7), e -> e.isAlive() && !e.hasCustomName()).size();
+		int named = level.getEntitiesOfClass(net.minecraft.world.entity.monster.zombie.Husk.class, new AABB(guardPos).inflate(7, 4, 7), e -> e.isAlive() && e.hasCustomName()).size();
+		int piglins = level.getEntitiesOfClass(net.minecraft.world.entity.monster.piglin.Piglin.class, new AABB(guardPos).inflate(7, 4, 7), e -> e.isAlive()).size();
+		System.out.println("[robots-test] guard: named husks left " + named + ", piglins left " + piglins);
+		if (named != 1) fails.add("Guard: a hostile mob with a name tag must be left alone");
+		if (piglins != 1) fails.add("Guard: a piglin that is not attacking anyone must be left alone");
+		int creepers = level.getEntitiesOfClass(net.minecraft.world.entity.monster.Creeper.class, new AABB(guardPos).inflate(7, 4, 7), e -> e.isAlive()).size();
+		System.out.println("[robots-test] guard: husks left " + husks + ", creepers left " + creepers + ", rotten flesh "
+				+ stored(level, guardPos.offset(-4, 0, -2), guard, s -> s.is(Items.ROTTEN_FLESH)) + ", energy " + guard.getEnergy() + ", status " + guard.getStatus().getString());
+		if (stored(level, guardPos.offset(-4, 0, -2), guard, s -> s.is(Items.ARROW)) != 0 || !lying(level, guardPos, Items.ARROW)) {
+			fails.add("Guard: arrows lying around that no monster of its dropped must stay where they are");
+		}
+		if (husks != 0) fails.add("Guard: " + husks + " husks are still alive");
+		if (creepers != 1) fails.add("Guard: the creeper should be left alone with Fight creepers off");
+
+		// Fisher
+		BlockPos fish = o.offset(FISH_X, 0, JOBS_Z);
+		var fisher = robotAt(level, dev.voltworks.robots.entity.FisherRobot.class, fish);
+		int caught = stored(level, fish.offset(-4, 0, -2), fisher, s -> !s.isEmpty());
+		boolean onBank = level.getBlockState(fisher.blockPosition()).getFluidState().isEmpty();
+		Container fishChest = (Container) level.getBlockEntity(fish.offset(-4, 0, -2));
+		int inChest = 0;
+		for (int i = 0; i < fishChest.getContainerSize(); i++) inChest += fishChest.getItem(i).getCount();
+		System.out.println("[robots-test] fisher: caught " + caught + " (chest " + inChest + "), at " + fisher.blockPosition() + ", energy " + fisher.getEnergy() + ", status " + fisher.getStatus().getString());
+		if (caught < 5) fails.add("Fisher: expected at least 5 catches, got " + caught);
+		if (!onBank) fails.add("Fisher: it should fish from the bank, not stand in the water");
+	}
+
+	private static final java.util.UUID ALEX = java.util.UUID.randomUUID(), STRANGER = java.util.UUID.randomUUID();
+
+	/** Set up after the main checks: markers that must not take effect, markers that must, and a robot dropped onto farmland. */
+	private static void buildLate(MinecraftServer server) {
+		ServerLevel level = server.overworld();
+		BlockPos o = origin(server);
+		// The field robot already has a field: two more markers by its home must not replace it
+		BlockPos field = o.offset(FIELD_X, 0, 0);
+		set(level, field.offset(-2, 0, -2), RobotBlocks.FIELD_MARKER);
+		set(level, field.offset(1, 0, -3), RobotBlocks.FIELD_MARKER);
+		// Two of Alex's robots: one gets markers placed by a stranger, the other markers placed by Alex
+		BlockPos breed = o.offset(BREED_X, 0, 0);
+		for (int side : new int[]{-1, 1}) {
+			spawn(level, RobotEntities.RANCHER_ROBOT, breed.offset(4 * side, 0, 4), 0).setOwner(ALEX, "Alex");
+			for (BlockPos marker : List.of(breed.offset(4 * side, 0, 2), breed.offset(2 * side, 0, 2))) {
+				set(level, marker, RobotBlocks.FIELD_MARKER);
+				dev.voltworks.robots.block.FieldMarkerBlock.setPlacer(level, marker, side < 0 ? STRANGER : ALEX);
+			}
+		}
+		// A robot falling three blocks onto farmland: anything else that size would trample it
+		BlockPos soil = breed.offset(4, -1, -4);
+		level.setBlockAndUpdate(soil, Blocks.FARMLAND.defaultBlockState().setValue(net.minecraft.world.level.block.FarmlandBlock.MOISTURE, 7));
+		var faller = spawn(level, RobotEntities.FISHER_ROBOT, soil.above(4), 500);
+		faller.setHome(soil.above());
+		faller.getInventory().setItem(0, new ItemStack(Items.COBBLESTONE, 3));
+	}
+
+	private static List<String> checkLate(MinecraftServer server) {
+		List<String> fails = new ArrayList<>();
+		ServerLevel level = server.overworld();
+		BlockPos o = origin(server);
+
+		// An existing field stays
+		BlockPos field = o.offset(FIELD_X, 0, 0);
+		int[] marked = robot(server, FarmRobot.class, FIELD_X).getField();
+		boolean standing = level.getBlockState(field.offset(-2, 0, -2)).is(RobotBlocks.FIELD_MARKER) && level.getBlockState(field.offset(1, 0, -3)).is(RobotBlocks.FIELD_MARKER);
+		System.out.println("[robots-test] markers: field after new markers " + java.util.Arrays.toString(marked) + ", new markers still standing " + standing);
+		if (marked == null || marked[0] != field.getX() - 1 || marked[1] != field.getZ() + 1 || marked[2] != field.getX() + 2 || marked[3] != field.getZ() + 3) {
+			fails.add("Markers: new markers must not replace a robot's existing field");
+		}
+		if (!standing) fails.add("Markers: a robot that has a field must leave new markers standing");
+
+		// Only markers placed by someone who may control the robot count
+		BlockPos breed = o.offset(BREED_X, 0, 0);
+		for (int side : new int[]{-1, 1}) {
+			var rancher = level.getEntitiesOfClass(dev.voltworks.robots.entity.RancherRobot.class, new AABB(breed.offset(4 * side, 0, 4)).inflate(1.5, 2, 1.5)).get(0);
+			boolean taken = !level.getBlockState(breed.offset(4 * side, 0, 2)).is(RobotBlocks.FIELD_MARKER) && !level.getBlockState(breed.offset(2 * side, 0, 2)).is(RobotBlocks.FIELD_MARKER);
+			System.out.println("[robots-test] markers: placed by " + (side < 0 ? "a stranger" : "the owner") + ": area " + java.util.Arrays.toString(rancher.getField()) + ", markers taken " + taken);
+			if (side < 0 && (rancher.getField() != null || taken)) fails.add("Markers: a stranger's markers must not set the area of somebody else's robot");
+			if (side > 0 && (rancher.getField() == null || !taken)) fails.add("Markers: the owner's markers should set the robot's area and be picked up");
+		}
+
+		// Farmland under a robot that fell onto it
+		BlockPos soil = breed.offset(4, -1, -4);
+		var faller = level.getEntitiesOfClass(dev.voltworks.robots.entity.FisherRobot.class, new AABB(soil.above()).inflate(3, 4, 3)).get(0);
+		System.out.println("[robots-test] farmland: robot at " + faller.blockPosition() + ", soil " + level.getBlockState(soil).getBlock());
+		if (faller.getY() > soil.getY() + 1.5) fails.add("Farmland: the robot should have landed by now");
+		if (!level.getBlockState(soil).is(Blocks.FARMLAND)) fails.add("Farmland: a robot landing on farmland must not trample it");
+
+		// The same robot killed outright (/kill): it leaves itself as an item, once, with its energy, and what it carried
+		faller.kill(level);
+		List<net.minecraft.world.entity.item.ItemEntity> dropped = level.getEntitiesOfClass(net.minecraft.world.entity.item.ItemEntity.class, faller.getBoundingBox().inflate(3));
+		List<ItemStack> packed = dropped.stream().map(net.minecraft.world.entity.item.ItemEntity::getItem).filter(s -> s.is(RobotItems.FISHER_ROBOT)).toList();
+		int energy = packed.isEmpty() ? -1 : packed.get(0).getOrDefault(net.minecraft.core.component.DataComponents.CUSTOM_DATA,
+				net.minecraft.world.item.component.CustomData.EMPTY).copyTag().getIntOr("energy", 0);
+		System.out.println("[robots-test] killed robot: alive " + faller.isAlive() + ", robot items dropped " + packed.size() + " (energy " + energy + ")");
+		if (faller.isAlive()) fails.add("Killed robot: /kill should kill it");
+		if (packed.size() != 1) fails.add("Killed robot: it should drop its robot item exactly once (dropped " + packed.size() + ")");
+		else if (energy != 500) fails.add("Killed robot: the dropped item should keep its 500 J (has " + energy + ")");
+		if (dropped.stream().noneMatch(e -> e.getItem().is(Items.COBBLESTONE))) fails.add("Killed robot: it should drop what it carried");
+		dropped.forEach(net.minecraft.world.entity.Entity::discard);
+
+		// A chest whose loot nobody has rolled yet is not a chest to the robots, and stays unrolled
+		BlockPos loot = breed.offset(-4, 0, -4);
+		set(level, loot, Blocks.CHEST);
+		net.minecraft.world.RandomizableContainer.setBlockEntityLootTable(level, level.getRandom(), loot, net.minecraft.world.level.storage.loot.BuiltInLootTables.SIMPLE_DUNGEON);
+		boolean used = dev.voltworks.robots.entity.NearbyChests.at(level, loot) != null;
+		boolean unrolled = ((net.minecraft.world.RandomizableContainer) level.getBlockEntity(loot)).getLootTable() != null;
+		System.out.println("[robots-test] loot chest: used " + used + ", still unrolled " + unrolled);
+		if (used || !unrolled) fails.add("Chests: an unopened loot chest must be left alone and unrolled");
+		((net.minecraft.world.RandomizableContainer) level.getBlockEntity(loot)).setLootTable(null); // or removing the chest would roll and spill it
+		level.removeBlock(loot, false);
 		return fails;
 	}
 
@@ -581,6 +872,16 @@ public class RobotsClientGameTest implements FabricClientGameTest {
 		if (allowed != operator) fails.add("Ownership: a survival player may control another's robot only as an operator");
 		if (locked == allowed) fails.add("Ownership: the terminal should list another player's robot as locked");
 		if (!allowed && farmer.setting("farm_radius") != radiusBefore) fails.add("Ownership: the terminal changed a robot the player does not own");
+		// A name tag from someone who may not control it does nothing, and nobody can put a robot on a lead
+		ItemStack tag = new ItemStack(Items.NAME_TAG);
+		tag.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, net.minecraft.network.chat.Component.literal("Mine now"));
+		player.setItemInHand(InteractionHand.MAIN_HAND, tag);
+		farmer.interact(player, InteractionHand.MAIN_HAND, farmer.position());
+		System.out.println("[robots-test] name tag: allowed " + allowed + ", renamed " + farmer.hasCustomName() + ", tags left " + player.getMainHandItem().getCount());
+		if (farmer.hasCustomName() != allowed) fails.add("Ownership: a name tag should rename a robot only for someone who may control it");
+		farmer.setCustomName(null);
+		player.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+		if (farmer.canBeLeashed()) fails.add("Robots must not be leashable");
 		farmer.setOwner(player);
 		if (!farmer.mayControl(player)) fails.add("Ownership: the owner must be able to control their robot");
 		command(server, "gamemode creative @a");

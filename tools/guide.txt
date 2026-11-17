@@ -1,23 +1,12 @@
 Robots
-@items robots:farm_robot robots:breeder_robot robots:lumberjack_robot robots:organizer_robot robots:robot_terminal
-Use a robot item on a block to stand it there. That block is its home, and you are its owner.
+@items robots:farm_robot robots:breeder_robot robots:rancher_robot robots:butcher_robot robots:lumberjack_robot robots:fisher_robot robots:guard_robot robots:organizer_robot robots:robot_terminal robots:charging_pad power_cell
+Use a robot item on a block: that block is its home and you are its owner. Only the owner can open, change or take it.
 
-Right-click: inventory (9 stacks).
-Punch: what is it doing?
-Sneak + right-click: pause.
-Sneak + punch: pick it up.
+Right-click: inventory. Punch: what is it doing? Sneak + right-click: pause. Sneak + punch: pick it up.
 
-Robot Terminal: a screen of every robot in range, with pause buttons and each robot's settings.
+Robot Terminal: every robot in range, with pause buttons and settings.
 
-Only the owner can open, change or take a robot.
----
-Charging Robots
-@items robots:charging_pad power_cell copper_cable
-By hand: right-click a robot with a Power Cell for 1,000 J.
-
-Automatic: wire a Robot Charging Pad to your power with Copper Cable. Below 20% a robot walks to a pad within 16 blocks of home, fills up and goes back to work.
-
-A robot standing on a pad is always topped up. Right-click the pad to see its charge.
+Power: right-click with a Power Cell (1,000 J), or wire a Robot Charging Pad to your power. Below 20% a robot walks to a pad within 16 blocks of home and fills up.
 ---
 Farm Robot
 @items robots:farm_robot minecraft:wheat_seeds minecraft:iron_hoe
@@ -32,20 +21,20 @@ Marking an Area
 Stand one Field Marker within 2 blocks of a robot's home and another at the opposite corner, up to 17 blocks away. The robot takes both and works only that rectangle.
 
 Farm Robot: a field. With a hoe and seeds it tills the dirt and grass there and plants as it goes.
-Breeder: a pen. Only animals inside count.
+Breeder, Rancher, Butcher: a pen. Only animals inside count.
 Lumberjack: a tree farm.
 
-The terminal's Clear field button undoes it.
+Only markers you placed yourself count. A robot keeps its area until the terminal's Clear field button undoes it.
 ---
-Animal Breeder Robot
-@items robots:breeder_robot minecraft:wheat
-Takes breeding food from a chest near home and feeds pairs of adult animals within 8 blocks.
+Animal Robots
+@items robots:breeder_robot robots:rancher_robot robots:butcher_robot minecraft:wheat minecraft:shears
+Breeder: feeds pairs of adult animals with food from a chest near home, up to 12 of a kind. Keep wheat, seeds or carrots in the chest.
 
-It stops at 12 animals of a kind, babies included, so pens do not overflow.
+Rancher: shears sheep and picks up the wool, eggs, feathers and leather lying around.
 
-Keep the right food in the chest: wheat for cows and sheep, seeds for chickens, carrots for pigs.
+Butcher: when there are more than 6 of a kind, it culls adults and collects the meat. It never touches babies, pets, or named, tamed or saddled animals.
 
-Switch kinds of animal on and off at a Robot Terminal.
+Switch kinds of animal on and off at a terminal.
 ---
 Lumberjack Robot
 @items robots:lumberjack_robot minecraft:iron_axe minecraft:oak_sapling
@@ -53,7 +42,13 @@ Give it an axe. It fells trees within 8 blocks of home from the top down, replan
 
 Logs go to the nearest chest. It keeps its axe and 16 saplings, and takes a new axe from a chest when one breaks.
 
-It only cuts trunks that grow from the ground and have natural leaves. Keep log buildings from touching its trees.
+It only cuts trunks that grow from the ground with natural leaves on top. Logs touching planks, glass, doors, stairs or slabs are left alone.
+---
+Guard and Fisher
+@items robots:guard_robot robots:fisher_robot minecraft:fishing_rod
+Guard: fights hostile mobs within 12 blocks of home and takes their drops to a chest. Named or leashed mobs are left alone, and so are Endermen and Piglins unless angry. Creepers can be switched off at a terminal, as they may explode.
+
+Fisher: give it a home near open water with a dry bank. It fishes and takes the catch to a chest (fish and junk, no treasure).
 ---
 Organizer Robot
 @items robots:organizer_robot minecraft:chest
